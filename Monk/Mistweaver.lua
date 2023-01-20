@@ -157,47 +157,9 @@ local Temp = {
 }
 
 TMW:RegisterCallback("TMW_ACTION_HEALINGENGINE_UNIT_UPDATE", function(callbackEvent, thisUnit, db, QueueOrder)
-	local unitID  = thisUnit.Unit
-	local unitHP  = thisUnit.realHP
-	local Role    = thisUnit.Role
-	local BlanketRenewingMist = A.GetToggle(2, "BlanketRenewingMist")
-	local useDispel, useShields, useHoTs, useUtils = HealingEngine.GetOptionsByUnitID(unitID)	
-	local delaySpells = math_random(500, 1000) / 100
-	local Cleanse = A.GetToggle(2, "Cleanse")	
-	
-	if (BlanketRenewingMist and thisUnit.useHoTs and not QueueOrder.useHoTs[Role] and A.RenewingMist:IsReady(unitID) and Unit(unitID):HasBuffs(A.RenewingMist.ID, true) == 0) or ((Unit(player):HasBuffs(A.YulonsBlessing.ID) > 0 or Unit(player):HasBuffsStacks(A.ChiJisBlessing.ID) >= 3) and thisUnit.useHoTs and not QueueOrder.useHoTs[Role] and A.EnvelopingMist:IsReady(unitID) and Unit(unitID):HasBuffs(A.EnvelopingMist.ID, true) == 0) then 
-		QueueOrder.useHoTs[Role] = true 
-		local default = unitHP - 10
-			
-		if Role == "TANK" then
-			thisUnit:SetupOffsets(db.OffsetTanksHoTs, default)
-		elseif Role == "HEALER" then 
-			thisUnit:SetupOffsets(db.OffsetHealersHoTs, default)
-		else 
-			thisUnit:SetupOffsets(db.OffsetDamagersHoTs, default)
-		end     
-		return
-	end 
-	-- Dispel
-	if A.Detox:IsReady(unitID) and A.Detox:IsSuspended(delaySpells, 6) and Cleanse then
-		if thisUnit.useDispel and not QueueOrder.useDispel[Role] and AuraIsValid(unitID, "UseDispel", "Dispel") then
-			QueueOrder.useDispel[Role] = true
-		
-			if thisUnit.isSelf then
-				thisUnit:SetupOffsets(db.OffsetSelfDispel, - 40)
-			elseif Role == "HEALER" then
-				thisUnit:SetupOffsets(db.OffsetHealersDispel, - 35)
-			elseif Role == "TANK" then
-				thisUnit:SetupOffsets(db.OffsetTanksDispel, - 25)
-			else
-				thisUnit:SetupOffsets(db.OffsetDamagersDispel, - 30)
-			end
-		
-			return
-		end
-	end		
+
 	--SpiritofRedemption
-	if Unit(unitID):HasBuffs(A.SpiritoftheRedeemer.ID) > 0 or Unit(unitID):HasBuffs(A.SpiritofRedemption.ID) > 0 or Unit(unitID):HasBuffs(A.ArcaneBravery.ID) > 0 then
+	if Unit(thisUnit.Unit):HasBuffs(A.SpiritoftheRedeemer.ID) > 0 or Unit(thisUnit.Unit):HasBuffs(A.SpiritofRedemption.ID) > 0 or Unit(thisUnit.Unit):HasBuffs(A.ArcaneBravery.ID) > 0 then
 		thisUnit.Enabled = false
 	else thisUnit.Enabled = true
 	end

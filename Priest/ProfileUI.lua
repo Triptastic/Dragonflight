@@ -67,7 +67,7 @@ A.Data.ProfileUI = {
                 },
             },	
 			{
-                { -- FortifyingBrewHP
+                { -- DispersionHP
                     E = "Slider",                                                     
                     MIN = 0, 
                     MAX = 100,                            
