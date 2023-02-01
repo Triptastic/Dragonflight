@@ -103,8 +103,8 @@ Action[ACTION_CONST_PRIEST_DISCIPLINE] = {
     --Disc Talents
     Atonement						= Action.Create({ Type = "Spell", ID = 194384, Hidden = true   }),
 	PowerWordRadiance				= Action.Create({ Type = "Spell", ID = 194509   }),
-	Penance							= Action.Create({ Type = "Spell", ID = 47540   }),
-	PenanceDmg						= Action.Create({ Type = "Spell", ID = 23018, Hidden = true   }),
+	Penance							= Action.Create({ Type = "Spell", ID = 47540, Texture = 391079 }),
+	PenanceDmg						= Action.Create({ Type = "Spell", ID = 23018,  }),
 	Purify							= Action.Create({ Type = "Spell", ID = 527   }),
 	FlashHeal						= Action.Create({ Type = "Spell", ID = 2061   }),
 	PainSuppression					= Action.Create({ Type = "Spell", ID = 33206   }),
@@ -127,9 +127,11 @@ Action[ACTION_CONST_PRIEST_DISCIPLINE] = {
 	TwilightEqualibriumShadow		= Action.Create({ Type = "Spell", ID = 390707, Hidden = true   }),
 	ArcaneBravery					= Action.Create({ Type = "Spell", ID = 385841, Hidden = true   }),	
 	SpiritofRedemption				= Action.Create({ Type = "Spell", ID = 27827, Hidden = true   }),
-	Healthstone     = Action.Create({ Type = "Spell", ID = 5512 }),
+	Healthstone     = Action.Create({ Type = "Item", ID = 5512 }),
 	GrievousWounds					= Action.Create({ Type = "Spell", ID = 240559, Hidden = true   }),
-	SpiritoftheRedeemer				= Action.Create({ Type = "Spell", ID = 215982   }),	
+	SpiritoftheRedeemer				= Action.Create({ Type = "Spell", ID = 215982   }),
+	InescapableTorment				= Action.Create({ Type = "Spell", ID = 373427, Hidden = true   }),	
+	Quaking                         = Action.Create({ Type = "Spell", ID = 240447, Hidden = true  }),
 }
 
 local A = setmetatable(Action[ACTION_CONST_PRIEST_DISCIPLINE], { __index = Action })
@@ -283,8 +285,17 @@ local function SelfDefensives()
         unitID = "target"
     end 
 
-	if A.CanUseHealthstoneOrHealingPotion() then
-		return A.Healthstone
+	local Healthstone = A.GetToggle(2, "HealthstoneHP") 
+	if Healthstone >= 0 then 
+		if A.Healthstone:IsReadyByPassCastGCD(player) then 					
+			if Healthstone >= 100 then -- AUTO 
+				if Unit(player):TimeToDie() <= 9 and Unit(player):HealthPercent() <= 40 then 
+					return A.Healthstone
+				end 
+			elseif Unit(player):HealthPercent() <= Healthstone then 
+				return A.Healthstone							 
+			end
+		end
 	end
 
     local DesperatePrayerHP = A.GetToggle(2, "DesperatePrayerHP")
@@ -435,12 +446,21 @@ A[3] = function(icon, isMulti)
     local isMoving = Player:IsMoving()
     local inCombat = Unit(player):CombatTime() > 0
 	local combatTime = Unit(player):CombatTime()
-    local ShouldStop = Action.ShouldStop()
 	local getmembersAll = HealingEngine.GetMembersAll()
+	local petActive = Player:GetTotemTimeLeft(1) > 0
+	local stopCasting = MultiUnits:GetByRangeCasting(60, 1, nil, Temp.stopCasting) >= 1
+	local quakingTime = 99
+	if Unit(player):HasDeBuffs(A.Quaking.ID) > 0 then
+		quakingTime = Unit(player):HasDeBuffs(A.Quaking.ID)
+	end
 
     Player:AddTier("Tier29", { 200327, 200326, 200328, 200324, 200329, })
     local T29has2P = Player:HasTier("Tier29", 2)
     local T29has4P = Player:HasTier("Tier29", 4)
+
+	if Unit(player):IsCastingRemains() > quakingTime + 0.5 or stopCasting then
+		return A:Show(icon, ACTION_CONST_STOPCAST)	
+	end
 
 	if A.Fade:IsReady(player) then
 		local playerstatus = UnitThreatSituation(player)
@@ -473,6 +493,7 @@ A[3] = function(icon, isMulti)
 
 		local PainSuppressionHP = A.GetToggle(2, "PainSuppressionHP")
 		local FlashHealHP = A.GetToggle(2, "FlashHealHP")
+		local FlashHealSoLHP = A.GetToggle(2, "FlashHealSoLHP")
 		local PenanceHP = A.GetToggle(2, "PenanceHP")
 		local PowerWordRadianceHP = A.GetToggle(2, "PowerWordRadianceHP")
 		local ShadowCovenantHP = A.GetToggle(2, "ShadowCovenantHP")
@@ -482,7 +503,7 @@ A[3] = function(icon, isMulti)
 		local VoidShiftTarget = A.GetToggle(2, "VoidShiftTarget")		
 		local useCleanse = A.GetToggle(2, "Cleanse")
 
-		if A.PainSuppression:IsReady(unitID) and Unit(unitID):HealthPercent() <= PainSuppressionHP and inCombat then
+		if A.PainSuppression:IsReady(unitID) and Unit(unitID):HealthPercent() <= PainSuppressionHP and inCombat and Unit(unitID):HasBuffs(A.PainSuppression.ID) == 0 then
 			return A.PainSuppression:Show(icon)
 		end
 
@@ -513,22 +534,12 @@ A[3] = function(icon, isMulti)
 			return UseTrinket:Show(icon)
 		end  
 
-		if A.Penance:IsReady(unitID) and not inCombat and Unit(unitID):HealthPercent() <= 90 then
+		if A.Penance:IsReady(unitID) and not stopCasting and not inCombat and Unit(unitID):HealthPercent() <= 90 and A.Penance:GetSpellCastTime() < quakingTime + 0.5 then
 			return A.Penance:Show(icon)
 		end
 
-		if A.FlashHeal:IsReady(unitID) and not inCombat and Unit(unitID):HasDeBuffs(A.GrievousWounds.ID) > 0 then
+		if A.FlashHeal:IsReady(unitID) and not stopCasting and not inCombat and Unit(unitID):HasDeBuffs(A.GrievousWounds.ID) > 0 and A.FlashHeal:GetSpellCastTime() < quakingTime + 0.5 then
 			return A.FlashHeal:Show(icon)
-		end
-
-		if A.PowerWordShield:IsReady(unitID) and Unit(unitID):HasBuffs(A.PowerWordShield.ID) == 0 then
-			if Unit(player):HasBuffs(A.Rapture.ID) == 0 then
-				if Unit(unitID):IsTanking() or Unit(unitID):IsTank() then
-					return A.PowerWordShield:Show(icon)
-				end
-			elseif Unit(player):HasBuffs(A.Rapture.ID) > 0 then
-				return A.PowerWordShield:Show(icon)
-			end
 		end
 
 		local _, currGUID = HealingEngine.GetTarget()
@@ -540,13 +551,45 @@ A[3] = function(icon, isMulti)
 					local useDispel, useShields, useHoTs, useUtils = HealingEngine.GetOptionsByUnitID(getmembersAll[i].Unit)
 					if not IsUnitEnemy(getmembersAll[i].Unit) and Unit(getmembersAll[i].Unit):GetRange() <= 40 and useShields and UnitGUID(getmembersAll[i].Unit) ~= currGUID and Unit(getmembersAll[i].Unit):HasBuffs(A.PowerWordShield.ID) <= A.GetGCD() then
 						HealingEngine.SetTarget(getmembersAll[i].Unit, 1)
-						return A.PowerWordShield:Show(icon)  
+						return A.PowerWordShield: Show(icon)  
 					end                
 				end 
 			end
 		end
 
-
+		--[[if Unit(player):HasBuffs(A.Rapture.ID) > 0 then
+			if A.PowerWordShield:IsReadyByPassCastGCD(player) then
+				for i = 1, #getmembersAll do 
+					local useDispel, useShields, useHoTs, useUtils = HealingEngine.GetOptionsByUnitID(getmembersAll[i].Unit)
+					if not IsUnitEnemy(getmembersAll[i].Unit) and Unit(getmembersAll[i].Unit):GetRange() <= 40 and useShields and UnitGUID(getmembersAll[i].Unit) ~= currGUID and Unit(getmembersAll[i].Unit):HasBuffs(A.PowerWordShield.ID) <= A.GetGCD() then
+						HealingEngine.SetTarget(getmembersAll[i].Unit, 1)
+						return A.PowerWordShield:Show(icon)  
+					end                
+				end 
+			end
+		end]]
+	
+		local PWRadianceTotal = 0
+		if A.PowerWordRadiance:IsReady(unitID) and not isMoving and not stopCasting and A.PowerWordRadiance:GetSpellCastTime() < quakingTime + 0.5 then
+			if PowerWordRadianceHP >= 100 then
+				for _, PWRUnit in pairs(TeamCache.Friendly.GUIDs) do
+					if Unit(PWRUnit):HealthDeficit() >= HealCalc(A.PowerWordRadiance) and Unit(PWRUnit):GetRange() <= 30 and not Unit(PWRUnit):InVehicle() and Unit(PWRUnit):HasBuffs(A.Atonement.ID, true) <= A.PowerWordRadiance:GetSpellCastTime() then
+						PWRadianceTotal = PWRadianceTotal + 1
+					end
+					if PWRadianceTotal >= 3 then
+						PWRadianceTotal = 0
+						return A.PowerWordRadiance:Show(icon)
+					end 
+				end
+			elseif PowerWordRadianceHP <= 99 then
+				if HealingEngine.GetBelowHealthPercentUnits(PowerWordRadianceHP, 30) >= 3 and Unit(unitID):HasBuffs(A.Atonement.ID, true) == 0 then
+					return A.PowerWordRadiance:Show(icon)
+				end
+			end
+			if A.PowerWordRadiance:GetSpellCharges() == 2 and inCombat and HealingEngine.GetBelowHealthPercentUnits(95, 30) >= 3 then
+				return A.PowerWordRadiance:Show(icon)
+			end
+		end
 
 		local shadowCovenantTotal = 0
 		if A.ShadowCovenant:IsReady(unitID) then
@@ -566,31 +609,17 @@ A[3] = function(icon, isMulti)
 				end
 			end
 		end
-	
-		local PWRadianceTotal = 0
-		if A.PowerWordRadiance:IsReady(unitID) and not isMoving then
-			if PowerWordRadianceHP >= 100 then
-				for _, PWRUnit in pairs(TeamCache.Friendly.GUIDs) do
-					if Unit(PWRUnit):HealthDeficit() >= HealCalc(A.PowerWordRadiance) and Unit(PWRUnit):GetRange() <= 30 and not Unit(PWRUnit):InVehicle() and Unit(PWRUnit):HasBuffs(A.Atonement.ID, true) <= A.GetCurrentGCD() then
-						PWRadianceTotal = PWRadianceTotal + 1
-					end
-					if PWRadianceTotal >= 3 then
-						PWRadianceTotal = 0
-						return A.PowerWordRadiance:Show(icon)
-					end 
-				end
-			elseif PowerWordRadianceHP <= 99 then
-				if HealingEngine.GetBelowHealthPercentUnits(PowerWordRadianceHP, 30) >= 3 and Unit(unitID):HasBuffs(A.Atonement.ID, true) == 0 then
-					return A.PowerWordRadiance:Show(icon)
-				end
-			end
-			if A.PowerWordRadiance:GetSpellCharges() == 2 and inCombat and HealingEngine.GetBelowHealthPercentUnits(95, 30) >= 3 then
-				return A.PowerWordRadiance:Show(icon)
+
+		if A.PowerWordShield:IsReady(unitID) and Unit(unitID):HasBuffs(A.PowerWordShield.ID) == 0 then
+			if Unit(player):HasBuffs(A.Rapture.ID) == 0 and (not inCombat or A.IsInPvP or ((Unit(unitID):IsTanking() or Unit(unitID):IsTank()) and Unit(unitID):HasBuffs(A.Atonement.ID, true) < A.GetGCD())) then
+				return A.PowerWordShield:Show(icon)
+			elseif Unit(player):HasBuffs(A.Rapture.ID) > 0 then
+				return A.PowerWordShield:Show(icon)
 			end
 		end
 
 		local haloTotal = 0
-		if A.Halo:IsReady(player) and not isMoving then
+		if A.Halo:IsReady(player) and not isMoving and not stopCasting and A.Halo:GetSpellCastTime() < quakingTime + 0.5 then
 			if HaloHP >= 100 then
 				for _, haloUnit in pairs(TeamCache.Friendly.GUIDs) do
 					if Unit(haloUnit):HealthDeficit() >= HealCalc(A.Halo) and Unit(haloUnit):GetRange() <= 30 and not Unit(haloUnit):InVehicle() then
@@ -608,7 +637,7 @@ A[3] = function(icon, isMulti)
 			end	
 		end
 
-		if A.Penance:IsReady(unitID) then
+		if A.Penance:IsReady(unitID) and not stopCasting and A.Penance:GetSpellCastTime() < quakingTime + 0.5 then
 			if PenanceHP >= 100 then
 				if Unit(unitID):HealthDeficit() >= HealCalc(A.Penance) then
 					return A.Penance:Show(icon)
@@ -620,14 +649,24 @@ A[3] = function(icon, isMulti)
 			end
 		end		
 
-		local onlySoL = A.GetToggle(2, "onlySoL")
-		if A.FlashHeal:IsReady(unitID) and (not Player:IsMoving() or Unit(player):HasBuffs(A.SurgeofLightBuff.ID) > 0) and ((onlySoL and Unit(player):HasBuffs(A.SurgeofLightBuff.ID) > 0) or not onlySoL) then
+		if A.FlashHeal:IsReady(unitID) and not stopCasting and (not Player:IsMoving() or Unit(player):HasBuffs(A.SurgeofLightBuff.ID) > 0) and A.FlashHeal:GetSpellCastTime() < quakingTime + 0.5 then
 			if FlashHealHP >= 100 then
 				if Unit(unitID):HealthDeficit() >= HealCalc(A.FlashHeal) then
 					return A.FlashHeal:Show(icon)
 				end
 			elseif FlashHealHP <= 99 then
 				if Unit(unitID):HealthPercent() <= FlashHealHP then
+					return A.FlashHeal:Show(icon)
+				end
+			end
+		end
+		if A.FlashHeal:IsReady(unitID) and not stopCasting and Unit(player):HasBuffs(A.SurgeofLightBuff.ID) > 0 then
+			if FlashHealSoLHP >= 100 then
+				if Unit(unitID):HealthDeficit() >= HealCalc(A.FlashHeal) then
+					return A.FlashHeal:Show(icon)
+				end
+			elseif FlashHealSoLHP <= 99 then
+				if Unit(unitID):HealthPercent() <= FlashHealSoLHP then
 					return A.FlashHeal:Show(icon)
 				end
 			end
@@ -641,9 +680,9 @@ A[3] = function(icon, isMulti)
 		end
 
 		if Unit(unitID):HasBuffs(A.Atonement.ID, true) == 0 and Unit(unitID):HealthPercent() <= 90 then
-			if A.PowerWordShield:IsReady(unitID) and inCombat then
+			--[[if A.PowerWordShield:IsReady(unitID) and inCombat then
 				return A.PowerWordShield:Show(icon)
-			end
+			end]]
 
 			if A.Renew:IsReady(unitID) and Unit(unitID):HasBuffs(A.Renew.ID, true) == 0 then
 				return A.Renew:Show(icon)
@@ -673,11 +712,15 @@ A[3] = function(icon, isMulti)
 			return UseTrinket:Show(icon)
 		end  
 
+		if A.VampiricEmbrace:IsReady(player, nil, nil, true) and Unit(player):HasBuffs(A.ShadowCovenantBuff.ID) > 3 then
+			return A.VampiricEmbrace:Show(icon)
+		end
+
 		if (A.ShadowWordPain:IsReady(unitID) or A.PurgeTheWicked:IsReady(unitID)) and Unit(unitID):IsExplosives() then
 			return A.ShadowWordPain:Show(icon)
 		end
 
-		if inCombat and (MultiUnits:GetByRangeCasting(60, 1, nil, Temp.scaryCasts) >= 1 or MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1) then
+		if inCombat and (MultiUnits:GetByRangeCasting(60, 1, nil, Temp.scaryCasts) >= 1 or MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1) and not A.Mindbender:IsTalentLearned() then
 			if A.Shadowfiend:IsReady(unitID) then
 				return A.Shadowfiend:Show(icon)
 			end
@@ -687,7 +730,7 @@ A[3] = function(icon, isMulti)
 			return A.ShadowWordPain:Show(icon)
 		end
 
-		if A.LightsWrath:IsReady(unitID) and not isMoving and HealingEngine.GetBuffsCount(A.Atonement.ID, A.LightsWrath:GetSpellCastTime()) >= HealingEngine.GetMinimumUnits(1, 10) then
+		if A.LightsWrath:IsReady(unitID) and not stopCasting and not isMoving and A.LightsWrath:GetSpellCastTime() < quakingTime + 0.5 and HealingEngine.GetBuffsCount(A.Atonement.ID, A.LightsWrath:GetSpellCastTime()) >= HealingEngine.GetMinimumUnits(1, 10) then
 			return A.LightsWrath:Show(icon)
 		end
 
@@ -707,23 +750,26 @@ A[3] = function(icon, isMulti)
 			return A.PowerWordSolace:Show(icon)
 		end
 
-		if A.Schism:IsReady(unitID) and Unit(unitID):TimeToDie() >= 10 and not isMoving and castShadow then
+		if A.Schism:IsReady(unitID) and not stopCasting and A.Schism:GetSpellCastTime() < quakingTime + 0.5 and Unit(unitID):TimeToDie() >= 10 and not isMoving and castShadow then
 			return A.Schism:Show(icon)
 		end
 
-		if A.Penance:IsReady(unitID) and ((A.PoweroftheDarkSide:IsTalentLearned() and Unit(player):HasBuffs(A.PoweroftheDarkSideBuff.ID) > 0 and castShadow) or (Unit(player):HasBuffs(A.PoweroftheDarkSideBuff.ID) == 0 and castHoly)) and (Unit(player):HasBuffs(A.HarshDisciplineBuff.ID) > 0 or not A.HarshDiscipline:IsTalentLearned() or isMoving) then  
+		if A.Penance:IsReady(unitID) and not stopCasting and A.Penance:GetSpellCastTime() < quakingTime + 0.5 and ((A.PoweroftheDarkSide:IsTalentLearned() and Unit(player):HasBuffs(A.PoweroftheDarkSideBuff.ID) > 0 and castShadow) or (Unit(player):HasBuffs(A.PoweroftheDarkSideBuff.ID) == 0 and castHoly)) and (Unit(player):HasBuffs(A.HarshDisciplineBuff.ID) > 0 or not A.HarshDiscipline:IsTalentLearned() or isMoving) then  
 			return A.PenanceDmg:Show(icon)
 		end
 
-		if A.MindBlast:IsReady(unitID) and not isMoving and castShadow and (Unit(player):HasBuffs(A.ShadowCovenantBuff.ID) > A.MindBlast:GetSpellCastTime() or not A.ShadowCovenant:IsTalentLearned()) then
+		if A.MindBlast:IsReady(unitID) and not stopCasting and A.MindBlast:GetSpellCastTime() < quakingTime + 0.5 and not isMoving and castShadow and (Unit(player):HasBuffs(A.ShadowCovenantBuff.ID) > A.MindBlast:GetSpellCastTime() or not A.ShadowCovenant:IsTalentLearned() or A.InescapableTorment:IsTalentLearned()) then
+			if A.Mindbender:IsReady(unitID) then
+				return A.Mindbender:Show(icon)
+			end
 			return A.MindBlast:Show(icon)
 		end
 
-		if A.Mindgames:IsReady(unitID) and not isMoving and castShadow then
+		if A.Mindgames:IsReady(unitID) and not stopCasting and A.Mindgames:GetSpellCastTime() < quakingTime + 0.5 and not isMoving and castShadow then
 			return A.Mindgames:Show(icon)
 		end
 
-		if A.Smite:IsReady(unitID) and not isMoving then
+		if A.Smite:IsReady(unitID) and not stopCasting and A.Smite:GetSpellCastTime() < quakingTime + 0.5 and not isMoving then
 			return A.Smite:Show(icon)
 		end
         

@@ -77,6 +77,7 @@ Action[ACTION_CONST_MONK_MISTWEAVER] = {
 	SpearHandStrike				= Action.Create({ Type = "Spell", ID = 116705   }),
 	RisingSunKick				= Action.Create({ Type = "Spell", ID = 107428   }),
 	Transcendence				= Action.Create({ Type = "Spell", ID = 101643   }),	
+	TranscendenceTransfer		= Action.Create({ Type = "Spell", ID = 119996   }),	
 	ChiTorpedo					= Action.Create({ Type = "Spell", ID = 115008   }),
 	ChiBurst					= Action.Create({ Type = "Spell", ID = 123986   }),	
 	RingofPeace					= Action.Create({ Type = "Spell", ID = 116844   }),	
@@ -94,6 +95,7 @@ Action[ACTION_CONST_MONK_MISTWEAVER] = {
 	DiffuseMagic				= Action.Create({ Type = "Spell", ID = 122783   }),
 	EnvelopingMist				= Action.Create({ Type = "Spell", ID = 124682   }),
 	EssenceFont					= Action.Create({ Type = "Spell", ID = 191837   }), 
+	EssenceFontBuff				= Action.Create({ Type = "Spell", ID = 191840   }),
 	FaelineStomp				= Action.Create({ Type = "Spell", ID = 388193   }),   	
 	HealingElixir				= Action.Create({ Type = "Spell", ID = 122281   }), 
 	InvokeChiji					= Action.Create({ Type = "Spell", ID = 325197   }), 	
@@ -108,7 +110,9 @@ Action[ACTION_CONST_MONK_MISTWEAVER] = {
 	SummonJadeSerpentStatue		= Action.Create({ Type = "Spell", ID = 115313   }),
 	ThunderFocusTea				= Action.Create({ Type = "Spell", ID = 116680   }),	
 	ZenPulse					= Action.Create({ Type = "Spell", ID = 124081   }),	
-	
+	SheilunsGift				= Action.Create({ Type = "Spell", ID = 399491   }),	
+	EnvelopingBreath			= Action.Create({ Type = "Spell", ID = 343655, Hidden = true   }),	
+
 	--Buffs/Talents
 	AncientConcordance			= Action.Create({ Type = "Spell", ID = 389391   }),	
 	TeachingsoftheMonastery		= Action.Create({ Type = "Spell", ID = 202090   }),	
@@ -119,11 +123,13 @@ Action[ACTION_CONST_MONK_MISTWEAVER] = {
 	YulonsBlessing				= Action.Create({ Type = "Spell", ID = 389422   }),	
 	ChiJisBlessing				= Action.Create({ Type = "Spell", ID = 343820   }),	
 	RisingMist					= Action.Create({ Type = "Spell", ID = 274909   }),		
+	GrappleWeapon				= Action.Create({ Type = "Spell", ID = 233759   }),	
 	Healthstone     = Action.Create({ Type = "Spell", ID = 5512 }),
 	SpiritofRedemption				= Action.Create({ Type = "Spell", ID = 27827, Hidden = true   }),
 	SpiritoftheRedeemer				= Action.Create({ Type = "Spell", ID = 215982   }),	
 	ArcaneBravery					= Action.Create({ Type = "Spell", ID = 385841, Hidden = true   }),	
 	GrievousWounds					= Action.Create({ Type = "Spell", ID = 240559, Hidden = true   }),
+	Eminence						= Action.Create({ Type = "Spell", ID = 353584, Hidden = true   }),
 }
 
 local A = setmetatable(Action[ACTION_CONST_MONK_MISTWEAVER], { __index = Action })
@@ -154,6 +160,53 @@ local Temp = {
     DisablePhys                             = {"TotalImun", "DamagePhysImun", "Freedom", "CCTotalImun"},
     DisableMag                              = {"TotalImun", "DamageMagicImun", "Freedom", "CCTotalImun"},
 	useVivify								= false,
+	incomingAoEDamage                       = { 372735, -- Tectonic Slam (RLP)
+												385536, -- Flame Dance (RLP)
+												392488, -- Lightning Storm (RLP)
+												392486, -- Lightning Storm (RLP)
+												372863, -- Ritual of Blazebinding (RLP)
+												373680, 373688, -- Frost Overload (RLP)
+												374720, -- Consuming Stomp (AV)
+												384132, -- Overwhelming Energy (AV)
+												388804, -- Unleashed Destruction (AV)
+												388817, -- Shards of Stone (NO)
+												387135, -- Arcing Strike (NO)
+												387145, -- Totemic Overload (NO)
+												386012, -- Stormbolt (NO)
+												386025, -- Tempest (NO)
+												384620, -- Electrical Storm (NO)
+												387411, -- Death Bolt Volley (NO)
+												387145, -- Totemic Overload (NO)
+												377004, -- Deafening Screech (AA)
+												388537, -- Arcane Fissue (AA)
+												388923, -- Burst Forth (AA)
+												212784, -- Eye Storm (CoS)
+												211406, -- Firebolt (CoS)
+												207906, -- Burning Intensity (CoS)
+												207881, -- Infernal Eruption (CoS)
+												397892, -- Scream of Pain (CoS)
+												153094, -- Whispers of the Dark Star (SBG)
+												164974, -- Dark Eclipse (SBG)
+												192305, -- Eye of the Storm (mini-boss)
+                                                200901, -- Eye of the Storm (boss)
+                                                153804, -- Inhale
+                                                175988, -- Omen of Death
+                                                106228, -- Nothingness
+                                                388008, -- Absolute Zero
+                                                191284, -- Horn of Valor (HoV)
+	},	
+	scaryCasts                              = { 396023, --Incinerating Roar
+												376279, --Concussive Slam
+												388290, --Cyclone
+												375457, --Chilling Tantrum
+	},
+stopCasting                             	= { 377004, --Deafening Screech
+												397892, --Scream of Pain
+												196543, --Unnerving Howl
+												199726, --Unruly Yell
+												381516, --Interrupting Cloudburst
+												384365, --Disruptive Shout
+	},
 }
 
 TMW:RegisterCallback("TMW_ACTION_HEALINGENGINE_UNIT_UPDATE", function(callbackEvent, thisUnit, db, QueueOrder)
@@ -183,6 +236,28 @@ local function SelfDefensives()
 		return A.HealingElixir
 	end
 	
+	if A.TranscendenceTransfer:IsReady(player) and A.Eminence:IsTalentLearned() and A.IsInPvP and LoC:Get("STUN") > 0 then
+		return A.TranscendenceTransfer
+	end
+
+	local noDefensiveActive = Unit(player):HasBuffs(A.DampenHarm.ID) == 0 and Unit(player):HasBuffs(A.DiffuseMagic.ID) == 0 and Unit(player):HasBuffs(A.FortifyingBrew.ID) == 0
+
+    local useRacial = A.GetToggle(1, "Racial")
+
+    if noDefensiveActive then
+        if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1 then
+            if A.DiffuseMagic:IsReady(player) then
+                return A.DiffuseMagic
+            end
+            if A.DampenHarm:IsReady(player) then
+                return A.DampenHarm
+            end
+            if A.FortifyingBrew:IsReady(player) then
+                return A.FortifyingBrew
+            end
+        end
+    end
+
 	if A.FortifyingBrew:IsReady(player) and Unit(player):HealthPercent() <= FortifyingBrewHP and (Unit(player):HasBuffs(A.DampenHarm.ID) == 0 or AllowOverlap) then
 		return A.FortifyingBrew
 	end
@@ -190,6 +265,10 @@ local function SelfDefensives()
 	if A.DampenHarm:IsReady(player) and Unit(player):HealthPercent() <= DampenHarmHP and (Unit(player):HasBuffs(A.FortifyingBrew.ID) == 0 or AllowOverlap) then
 		return A.DampenHarm
 	end
+
+	if A.Fireblood:IsRacialReady("player", true) and not A.IsInPvP and A.AuraIsValid("player", "UseDispel", "Dispel") then 
+		return A.Fireblood
+	end 
 
 end 
 SelfDefensives = A.MakeFunctionCachedStatic(SelfDefensives)
@@ -314,98 +393,37 @@ local function AoECDs()
 	local RevivalTargets = A.GetToggle(2, "RevivalTargets")	
 	local ChiJiHP = A.GetToggle(2, "ChiJiHP")
 	local ChiJiTargets = A.GetToggle(2, "ChiJiTargets")	
+	local stopCasting = MultiUnits:GetByRangeCasting(60, 1, nil, Temp.stopCasting) >= 1
 
-	if RevivalTargets > 5 and TeamCache.Friendly.Size > 5 then
-		RevivalTargets = 5
+	if A.SheilunsGift:IsReady(player) and not isMoving and HealingEngine.GetBelowHealthPercentUnits(80, 40) >= 3 and A.SheilunsGift:GetCount() >= 6 and not stopCasting then
+		return A.BonedustBrew
 	end
 
-	if ChiJiTargets > 5 and TeamCache.Friendly.Size > 5 then
-		ChiJiTargets = 5
-	end
+	local trueRevivalTargets = HealingEngine.GetMinimumUnits(2, RevivalTargets)
+	local trueChiJiTargets = HealingEngine.GetMinimumUnits(2, ChiJiTargets)
 
 	if A.Revival:IsReady(player) or A.Restoral:IsReady(player) then
 		if RevivalHP >= 100 then
-			if RevivalTargets >= 25 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= 20 then
-					if A.Revival:IsReady(player) then
-						return A.Revival
-					elseif A.Restoral:IsReady(player) then
-						return A.Restoral
-					end
-				end
+			if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= trueRevivalTargets then
+				return A.Revival
 			end
-			if RevivalTargets <= 24 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= RevivalTargets then
-					if A.Revival:IsReady(player) then
-						return A.Revival
-					elseif A.Restoral:IsReady(player) then
-						return A.Restoral
-					end
-				end	
-			end
-		elseif RevivalHP <= 99 then 
-			if RevivalTargets >= 25 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= 20 then
-					if A.Revival:IsReady(player) then
-						return A.Revival
-					elseif A.Restoral:IsReady(player) then
-						return A.Restoral
-					end
-				end
-			end
-			if RevivalTargets <= 24 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= RevivalTargets then
-					if A.Revival:IsReady(player) then
-						return A.Revival
-					elseif A.Restoral:IsReady(player) then
-						return A.Restoral
-					end
-				end	
+		elseif RevivalHP <= 99 then
+			if HealingEngine.GetBelowHealthPercentUnits(RevivalHP, 40) >= trueRevivalTargets then
+				return A.Revival
 			end
 		end
 	end
-	
 	if A.InvokeChiji:IsReady(player) or A.InvokeYulon:IsReady(player) then
 		if ChiJiHP >= 100 then
-			if ChiJiTargets >= 25 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= 20 then
-					if A.InvokeChiji:IsReady(player) then
-						return A.InvokeChiji
-					elseif A.InvokeYulon:IsReady(player) then
-						return A.InvokeYulon
-					end
-				end
+			if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= trueChiJiTargets then
+				return A.InvokeChiji
 			end
-			if ChiJiTargets <= 24 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= ChiJiTargets then
-					if A.InvokeChiji:IsReady(player) then
-						return A.InvokeChiji
-					elseif A.InvokeYulon:IsReady(player) then
-						return A.InvokeYulon
-					end
-				end	
-			end
-		elseif ChiJiHP <= 99 then 
-			if ChiJiTargets >= 25 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= 20 then
-					if A.InvokeChiji:IsReady(player) then
-						return A.InvokeChiji
-					elseif A.InvokeYulon:IsReady(player) then
-						return A.InvokeYulon
-					end
-				end
-			end
-			if ChiJiTargets <= 24 then
-				if HealingEngine.GetBelowHealthPercentUnits(65, 40) >= ChiJiTargets then
-					if A.InvokeChiji:IsReady(player) then
-						return A.InvokeChiji
-					elseif A.InvokeYulon:IsReady(player) then
-						return A.InvokeYulon
-					end
-				end	
+		elseif ChiJiHP <= 99 then
+			if HealingEngine.GetBelowHealthPercentUnits(ChiJiHP, 40) >= trueChiJiTargets then
+				return A.InvokeChiji
 			end
 		end
-	end	
+	end
 end
 
 local function CancelSoothingMist()
@@ -426,9 +444,14 @@ A[3] = function(icon, isMulti)
 	local combatTime = Unit(player):CombatTime()
     local ShouldStop = Action.ShouldStop()
 	local UseAoE = A.GetToggle(2, "AoE")
+	local stopCasting = MultiUnits:GetByRangeCasting(60, 1, nil, Temp.stopCasting) >= 1
 
 		local function EnemyRotation(unitID)
 		
+			if A.GrappleWeapon:IsReady(unitID) and A.IsInPvP and Unit(unitID):IsMelee() then
+				return A.GrappleWeapon:Show(icon)
+			end
+
 			if A.TouchofDeath:IsReady(unitID) then
 				return A.TouchofDeath:Show(icon)
 			end
@@ -453,7 +476,7 @@ A[3] = function(icon, isMulti)
 				return A.FaelineStomp:Show(icon)
 			end
 			
-			if A.SpinningCraneKick:IsReady(player) and MultiUnits:GetByRange(3, 10) >= 3 and UseAoE then
+			if A.SpinningCraneKick:IsReady(player) and MultiUnits:GetByRange(3, 10) >= 3 and UseAoE and not stopCasting then
 				return A.SpinningCraneKick:Show(icon)
 			end
 			
@@ -464,7 +487,7 @@ A[3] = function(icon, isMulti)
 				return A.RisingSunKick:Show(icon)
 			end
 			
-			if A.SpinningCraneKick:IsReady(player) and MultiUnits:GetByRange(2, 10) >= 2 and UseAoE then
+			if A.SpinningCraneKick:IsReady(player) and MultiUnits:GetByRange(2, 10) >= 2 and UseAoE and not stopCasting then
 				return A.SpinningCraneKick:Show(icon)
 			end			
 			
@@ -497,10 +520,11 @@ A[3] = function(icon, isMulti)
 			local RenewingMistCount = HealingEngine:GetBuffsCount(A.RenewingMist.ID, A.Vivify:GetSpellCastTime(), player)
 
 			local DungeonGroup = TeamCache.Friendly.Size >= 2 and TeamCache.Friendly.Size <= 5
-			local RaidGroup = TeamCache.Friendly.Size >= 5 	
+			local RaidGroup = TeamCache.Friendly.Size > 5 	
 			
 			local StandingOnFaeline = ((Unit(player):HasBuffs(A.AncientConcordance.ID) > 0 and A.AncientConcordance:IsTalentLearned()) or not A.AncientConcordance:IsTalentLearned())
-			
+			local celestialTime = Player:GetTotemTimeLeft(1)
+
 			local getmembersAll = HealingEngine.GetMembersAll()			
 			if Player:IsChanneling() == A.SoothingMist:Info() then
 				for i = 1, #getmembersAll do 
@@ -510,18 +534,40 @@ A[3] = function(icon, isMulti)
 				end
 			end
 			
+			if Player:IsChanneling() == A.EssenceFont:Info() and not isMoving then
+				if HealingEngine.GetBuffsCount(A.EssenceFontBuff.ID, 0, player) > HealingEngine.GetMinimumUnits(1, 6) then
+					return A:Show(icon, ACTION_CONST_STOPCAST)	
+				end
+			end
+
 			local EmergencyHeals = EmergencyHealing(unitID)
-			if EmergencyHeals then
+			if EmergencyHeals and inCombat then
 				return EmergencyHeals:Show(icon)
 			end
 			
 			local UseAoECDs = AoECDs()
-			if UseAoECDs then
+			if UseAoECDs and inCombat then
 				return UseAoECDs:Show(icon)
 			end
-			
+
 			if A.Detox:IsReady(unitID) and Cleanse and AuraIsValid(unitID, "UseDispel", "Dispel") then
 				return A.Detox:Show(icon)
+			end
+
+			if Unit(player):HasBuffsStacks(A.ChiJisBlessing.ID) >= 3 then
+				return A.EnvelopingMist:Show(icon)
+			end
+
+			if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1 or MultiUnits:GetByRangeCasting(60, 1, nil, Temp.scaryCasts) >= 1 then
+				if A.InvokeChiji:IsReady(player) then
+					return A.InvokeChiji:Show(icon)
+				end
+				if A.SheilunsGift:IsReady(player) and not isMoving and A.SheilunsGift:GetCount() >= 6 and not stopCasting then
+					return A.BonedustBrew:Show(icon)
+				end
+				if A.InvokeYulon:IsReady(player) then
+					return A.InvokeYulon:Show(icon)
+				end
 			end
 
 			if A.ExpelHarm:IsReady(unitID, nil, nil, true) and not isMoving and Player:IsChanneling() == A.SoothingMist:Info() then
@@ -538,11 +584,11 @@ A[3] = function(icon, isMulti)
 
 			if A.EnvelopingMist:IsReady(unitID, nil, nil, true) and not isMoving and Unit(unitID):HasBuffs(A.EnvelopingMist.ID, true) == 0 then
 				if EnvelopingMistHP >= 100 then
-					if Unit(unitID):HealthPercent() <= 50 or Unit(player):HasBuffs(A.YulonsBlessing.ID) > 0 or Unit(player):HasBuffsStacks(A.ChiJisBlessing.ID) >= 3 then
+					if Unit(unitID):HealthPercent() <= 50 or Unit(player):HasBuffs(A.YulonsBlessing.ID) > 0 then
 						if A.ManaTea:IsReady(player) then
 							return A.ManaTea:Show(icon)
 						end
-						if A.SoothingMist:IsReady(unitID) then
+						if A.SoothingMist:IsReady(unitID) and not isMoving then
 							return A.SoothingMist:Show(icon)
 						end
 						if SoothingMistActive then
@@ -550,11 +596,11 @@ A[3] = function(icon, isMulti)
 						end
 					end
 				elseif EnvelopingMistHP <= 99 then
-					if Unit(unitID):HealthPercent() <= EnvelopingMistHP or Unit(player):HasBuffs(A.YulonsBlessing.ID) > 0 or Unit(player):HasBuffsStacks(A.ChiJisBlessing.ID) >= 3 then
+					if Unit(unitID):HealthPercent() <= EnvelopingMistHP or Unit(player):HasBuffs(A.YulonsBlessing.ID) > 0 then
 						if A.ManaTea:IsReady(player) then
 							return A.ManaTea:Show(icon)
 						end						
-						if A.SoothingMist:IsReady(unitID) then
+						if A.SoothingMist:IsReady(unitID) and not isMoving then
 							return A.SoothingMist:Show(icon)
 						end
 						if SoothingMistActive then
@@ -575,7 +621,7 @@ A[3] = function(icon, isMulti)
 							if A.ManaTea:IsReady(player) and not A.InvokeYulon:IsTalentLearned() then
 								return A.ManaTea:Show(icon)
 							end						
-							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving then
+							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving and not stopCasting then
 								return A.SoothingMist:Show(icon)
 							end	
 							if InstantVivifyReady then
@@ -587,7 +633,7 @@ A[3] = function(icon, isMulti)
 							if A.ManaTea:IsReady(player) and not A.InvokeYulon:IsTalentLearned() then
 								return A.ManaTea:Show(icon)
 							end						
-							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving then
+							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving and not stopCasting then
 								return A.SoothingMist:Show(icon)
 							end		
 							if InstantVivifyReady then
@@ -597,12 +643,9 @@ A[3] = function(icon, isMulti)
 					end
 				end
 				
-				if A.EssenceFont:IsReady(player) then
+				if A.EssenceFont:IsReady(player) and not stopCasting then
 					if EssenceFontHP >= 100 then
 						if HealingEngine.GetBelowHealthPercentUnits(90, 30) >= EssenceFontTargets then
-							if A.BonedustBrew:IsReady(player) then
-								return A.BonedustBrew:Show(icon)
-							end
 							if A.ThunderFocusTea:IsReady(player) and not A.RisingMist:IsTalentLearned() then
 								return A.ThunderFocusTea:Show(icon)
 							end
@@ -610,10 +653,7 @@ A[3] = function(icon, isMulti)
 						end
 					elseif EssenceFontHP <= 99 then 
 						local EssenceFontHealingAmount = EssenceFontHP
-						if HealingEngine.GetBelowHealthPercentUnits(EssenceFontHealingAmount, 30) >= EssenceFontTargets then
-							if A.BonedustBrew:IsReady(player) then
-								return A.BonedustBrew:Show(icon)
-							end						
+						if HealingEngine.GetBelowHealthPercentUnits(EssenceFontHealingAmount, 30) >= EssenceFontTargets then					
 							if A.ThunderFocusTea:IsReady(player) and not A.RisingMist:IsTalentLearned() then
 								return A.ThunderFocusTea:Show(icon)
 							end
@@ -648,7 +688,7 @@ A[3] = function(icon, isMulti)
 							if A.ManaTea:IsReady(player) and not A.InvokeYulon:IsTalentLearned() then
 								return A.ManaTea:Show(icon)
 							end
-							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving then
+							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving and not stopCasting then
 								return A.SoothingMist:Show(icon)
 							end
 							if InstantVivifyReady then
@@ -660,7 +700,7 @@ A[3] = function(icon, isMulti)
 							if A.ManaTea:IsReady(player) and not A.InvokeYulon:IsTalentLearned() then
 								return A.ManaTea:Show(icon)
 							end						
-							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive then
+							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not stopCasting then
 								return A.SoothingMist:Show(icon)
 							end
 							if InstantVivifyReady then
@@ -670,8 +710,12 @@ A[3] = function(icon, isMulti)
 					end
 				end
 				
-				if A.ChiBurst:IsReady(player) and not isMoving then
+				if A.ChiBurst:IsReady(player) and not isMoving and not stopCasting then
 					return A.ChiBurst:Show(icon)
+				end
+
+				if A.ChiWave:IsReady(unitID) then
+					return A.ChiWave:Show(icon)
 				end
 
 				if A.RenewingMist:IsReady(unitID) and Unit(unitID):HasBuffs(A.RenewingMist.ID, true) == 0 then
@@ -724,12 +768,9 @@ A[3] = function(icon, isMulti)
 					end
 				end		
 			
-				if A.EssenceFont:IsReady(player) then
+				if A.EssenceFont:IsReady(player) and not stopCasting and isMoving then
 					if EssenceFontHP >= 100 then
-						if HealingEngine.GetBelowHealthPercentUnits(90, 30) >= EssenceFontTargets then
-							if A.BonedustBrew:IsReady(player) then
-								return A.BonedustBrew:Show(icon)
-							end						
+						if HealingEngine.GetBelowHealthPercentUnits(90, 30) >= EssenceFontTargets then				
 							if A.ThunderFocusTea:IsReady(player) and not A.RisingMist:IsTalentLearned() then
 								return A.ThunderFocusTea:Show(icon)
 							end
@@ -737,10 +778,7 @@ A[3] = function(icon, isMulti)
 						end
 					elseif EssenceFontHP <= 99 then 
 						local EssenceFontHealingAmount = EssenceFontHP
-						if HealingEngine.GetBelowHealthPercentUnits(EssenceFontHealingAmount, 30) >= EssenceFontTargets then
-							if A.BonedustBrew:IsReady(player) then
-								return A.BonedustBrew:Show(icon)
-							end						
+						if HealingEngine.GetBelowHealthPercentUnits(EssenceFontHealingAmount, 30) >= EssenceFontTargets then					
 							if A.ThunderFocusTea:IsReady(player) and not A.RisingMist:IsTalentLearned() then
 								return A.ThunderFocusTea:Show(icon)
 							end
@@ -759,7 +797,7 @@ A[3] = function(icon, isMulti)
 							if A.ManaTea:IsReady(player) and not A.InvokeYulon:IsTalentLearned() then
 								return A.ManaTea:Show(icon)
 							end						
-							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving then
+							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not isMoving and not stopCasting then
 								return A.SoothingMist:Show(icon)
 							end
 							if InstantVivifyReady then
@@ -771,7 +809,7 @@ A[3] = function(icon, isMulti)
 							if A.ManaTea:IsReady(player) and not A.InvokeYulon:IsTalentLearned() then
 								return A.ManaTea:Show(icon)
 							end						
-							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive then
+							if A.SoothingMist:IsReady(unitID) and not InstantVivifyReady and not SoothingMistActive and not stopCasting then
 								return A.SoothingMist:Show(icon)
 							end
 							if InstantVivifyReady then
@@ -785,8 +823,16 @@ A[3] = function(icon, isMulti)
 					return A.FaelineStomp:Show(icon)
 				end
 				
-				if A.EssenceFont:IsReady(player) and Unit(player):HasBuffs(A.AncientTeachings.ID) == 0 and A.AncientTeachings:IsTalentLearned() and inCombat then
+				if A.EssenceFont:IsReady(player) and Unit(player):HasBuffs(A.AncientTeachings.ID) == 0 and A.AncientTeachings:IsTalentLearned() and inCombat and not stopCasting then
 					return A.EssenceFont:Show(icon)
+				end
+
+				if A.ChiBurst:IsReady(player) and not isMoving and not stopCasting then
+					return A.ChiBurst:Show(icon)
+				end
+
+				if A.ChiWave:IsReady(unitID) then
+					return A.ChiWave:Show(icon)
 				end
 				
 			end

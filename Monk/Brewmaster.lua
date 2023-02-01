@@ -269,7 +269,7 @@ Action[ACTION_CONST_MONK_BREWMASTER] = {
 	CalltoArms     = Action.Create({ Type = "Spell", ID = 397251 }),
 	HeavyStagger     = Action.Create({ Type = "Spell", ID = 124273 }),
 	PurifiedChi     = Action.Create({ Type = "Spell", ID = 325092 }),
-	Healthstone     = Action.Create({ Type = "Spell", ID = 5512 }),
+	Healthstone     = Action.Create({ Type = "Item", ID = 5512 }),
 }
 
 local A = setmetatable(Action[ACTION_CONST_MONK_BREWMASTER], { __index = Action })
@@ -476,7 +476,7 @@ local function Interrupts(unitID)
             return A.SpearHandStrike
         end
 		
-        if useCC and A.LegSweep:IsReady(unitID) then 
+        if useCC and A.LegSweep:IsReady(unitID) and A.TigerPalm:IsInRange(unitID) then 
             return A.LegSweep
         end		
 

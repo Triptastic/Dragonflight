@@ -128,7 +128,7 @@ Action[ACTION_CONST_PRIEST_HOLY] = {
 	ArcaneBravery					= Action.Create({ Type = "Spell", ID = 385841, Hidden = true   }),	
 	GrievousWounds					= Action.Create({ Type = "Spell", ID = 240559, Hidden = true   }),
 	SpiritofRedemption				= Action.Create({ Type = "Spell", ID = 27827, Hidden = true   }),
-	Healthstone     = Action.Create({ Type = "Spell", ID = 5512 }),
+	Healthstone     = Action.Create({ Type = "Item", ID = 5512 }),
 	--PvP
 	SpiritoftheRedeemer				= Action.Create({ Type = "Spell", ID = 215982   }),	
 	DivineAscension					= Action.Create({ Type = "Spell", ID = 328530, Texture = 38606   }),	
@@ -267,8 +267,17 @@ local function SelfDefensives()
         unitID = "target"
     end  
 
-	if A.CanUseHealthstoneOrHealingPotion() then
-		return A.Healthstone
+	local Healthstone = A.GetToggle(2, "HealthstoneHP") 
+	if Healthstone >= 0 then 
+		if A.Healthstone:IsReadyByPassCastGCD(player) then 					
+			if Healthstone >= 100 then -- AUTO 
+				if Unit(player):TimeToDie() <= 9 and Unit(player):HealthPercent() <= 40 then 
+					return A.Healthstone
+				end 
+			elseif Unit(player):HealthPercent() <= Healthstone then 
+				return A.Healthstone							 
+			end
+		end
 	end
 
 	if A.SpiritoftheRedeemer:IsReady(player) and A.SpiritoftheRedeemer:IsTalentLearned() and Unit(player):HealthPercent() <= 20 and Unit(player):HasBuffs(A.DivineAscensionBuff.ID) == 0 then

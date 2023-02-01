@@ -1,6 +1,7 @@
---#############################
---##### TRIP'S WARRIOR UI #####
---#############################
+--####################################
+--##### TRIP'S WARLOCK PROFILEUI #####
+--####################################
+
 
 local TMW											= TMW 
 local CNDT											= TMW.CNDT
@@ -22,215 +23,13 @@ local TeamCache										= A.TeamCache
 local InstanceInfo									= A.InstanceInfo
 local select, setmetatable							= select, setmetatable
 
+
 A.Data.ProfileEnabled[Action.CurrentProfile] = true
 A.Data.ProfileUI = {    
-    DateTime = "v1.0.0 (10 December 2020)",
+    DateTime = "v1.1.0 (18 Nov 2020)",
     -- Class settings
     [2] = {        
-        [ACTION_CONST_WARRIOR_PROTECTION] = { 
-			{ -- GENERAL OPTIONS FIRST ROW
-                { -- MOUSEOVER
-                    E = "Checkbox", 
-                    DB = "mouseover",
-                    DBV = true,
-                    L = { 
-                        enUS = "Use @mouseover", 
-                        ruRU = "Использовать @mouseover", 
-                        frFR = "Utiliser les fonctions @mouseover",
-                    }, 
-                    TT = { 
-                        enUS = "Will unlock use actions for @mouseover units\nExample: Resuscitate, Healing", 
-                        ruRU = "Разблокирует использование действий для @mouseover юнитов\nНапример: Воскрешение, Хилинг", 
-                        frFR = "Activera les actions via @mouseover\n Exemple: Ressusciter, Soigner",
-                    }, 
-                    M = {},
-                },
-				{ -- AOE
-                    E = "Checkbox", 
-                    DB = "AoE",
-                    DBV = true,
-                    L = { 
-                        enUS = "Use AoE", 
-                        ruRU = "Использовать AoE", 
-                        frFR = "Utiliser l'AoE",
-                    }, 
-                    TT = { 
-                        enUS = "Enable multiunits actions", 
-                        ruRU = "Включает действия для нескольких целей", 
-                        frFR = "Activer les actions multi-unités",
-                    }, 
-                    M = {
-                        Custom = "/run Action.AoEToggleMode()",
-                        -- It does call func CraftMacro(L[CL], macro above, 1) -- 1 means perCharacter tab in MacroUI, if nil then will be used allCharacters tab in MacroUI
-                        Value = value or nil, 
-                        -- Very Very Optional, no idea why it will be need however.. 
-                        TabN = '@number' or nil,                                
-                        Print = '@string' or nil,
-                    },
-                },				
-            },
-            { -- LAYOUT SPACE   
-                {
-                    E = "LayoutSpace",                                                                         
-                },
-            },
-            { -- PRIEST HEADER
-                {
-                    E = "Header",
-                    L = {
-                        ANY = " ====== TRINKETS ====== ",
-                    },
-                },
-            },
-			{
-				{ -- Trinket Type 1
-                    E = "Dropdown",                                                         
-                    OT = {
-						{ text = "Damage", value = "Damage" },
-						{ text = "Friendly", value = "Friendly" },
-						{ text = "Self Defensive", value = "SelfDefensive" },
-						{ text = "Mana Gain", value = "ManaGain" },						
-                    },
-                    DB = "TrinketType1",
-                    DBV = "Damage",
-                    L = { 
-                        ANY = "First Trinket",
-                    }, 
-                    TT = { 
-                        ANY = "Pick what type of trinket you have in your first/upper trinket slot (only matters for trinkets with Use effects).", 
-                    }, 
-                    M = {},
-                },	
-				{ -- Trinket Type 2
-                    E = "Dropdown",                                                         
-                    OT = {
-						{ text = "Damage", value = "Damage" },
-						{ text = "Friendly", value = "Friendly" },
-						{ text = "Self Defensive", value = "SelfDefensive" },
-						{ text = "Mana Gain", value = "ManaGain" },						
-                    },
-                    DB = "TrinketType2",
-                    DBV = "Damage",
-                    L = { 
-                        ANY = "Second Trinket",
-                    }, 
-                    TT = { 
-                        ANY = "Pick what type of trinket you have in your second/lower trinket slot (only matters for trinkets with Use effects).", 
-                    }, 
-                    M = {},
-                },				
-			},			
-			{
-                { -- TrinketValue1
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "TrinketValue1",
-                    DBV = 40,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "First Trinket Value",
-                    },
-                    TT = { 
-                        ANY = "HP/Mana (%) to use your first trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
-                    },                     
-                    M = {},
-                },	
-                { -- TrinketValue2
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "TrinketValue2",
-                    DBV = 40,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Second Trinket Value",
-                    },
-                    TT = { 
-                        ANY = "HP/Mana (%) to use your second trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
-                    },                     
-                    M = {},
-                },					
-			},				
-            { -- LAYOUT SPACE   
-                {
-                    E = "LayoutSpace",                                                                         
-                },
-            },	
-            {
-                {
-                    E = "Header",
-                    L = {
-                        ANY = " ====== DEFENSIVES ====== ",
-                    },
-                },
-            },
-            {
-                { -- ShieldWallHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "ShieldWallHP",
-                    DBV = 40,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Shield Wall HP",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Shield Wall.", 
-                    },                     
-                    M = {},
-                },
-                { -- LastStandHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "LastStandHP",
-                    DBV = 50,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Last Stand HP",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Last Stand.", 
-                    },                     
-                    M = {},
-                },
-            },		
-            {
-                { -- VictoryRushHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "VictoryRushHP",
-                    DBV = 70,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Victory Rush HP",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Victory Rush.", 
-                    },                     
-                    M = {},
-                },
-                { -- VictoryRushHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "BitterImmunityHP",
-                    DBV = 50,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Bitter Immunity HP",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Bitter Immunity.", 
-                    },                     
-                    M = {},
-                },
-            },							
-        },
-        [ACTION_CONST_WARRIOR_FURY] = { 
+        [ACTION_CONST_WARLOCK_AFFLICTION] = {  
             { -- GENERAL HEADER
                 {
                     E = "Header",
@@ -240,23 +39,7 @@ A.Data.ProfileUI = {
                 },
             },            
             { -- GENERAL OPTIONS FIRST ROW
-                { -- MOUSEOVER
-                    E = "Checkbox", 
-                    DB = "mouseover",
-                    DBV = true,
-                    L = { 
-                        enUS = "Use @mouseover", 
-                        ruRU = "Использовать @mouseover", 
-                        frFR = "Utiliser les fonctions @mouseover",
-                    }, 
-                    TT = { 
-                        enUS = "Will unlock use actions for @mouseover units\nExample: Resuscitate, Healing", 
-                        ruRU = "Разблокирует использование действий для @mouseover юнитов\nНапример: Воскрешение, Хилинг", 
-                        frFR = "Activera les actions via @mouseover\n Exemple: Ressusciter, Soigner",
-                    }, 
-                    M = {},
-                },
-				{ -- AOE
+                { -- AOE
                     E = "Checkbox", 
                     DB = "AoE",
                     DBV = true,
@@ -279,193 +62,21 @@ A.Data.ProfileUI = {
                         Print = '@string' or nil,
                     },
                 },
-            },
-            { -- Trinket HEADER
                 {
-                    E = "Header",
-                    L = {
-                        ANY = " ====== TRINKETS ====== ",
-                    },
-                },
-            },
-			{
-				{ -- Trinket Type 1
                     E = "Dropdown",                                                         
                     OT = {
-						{ text = "Damage", value = "Damage" },
-						{ text = "Friendly", value = "Friendly" },
-						{ text = "Self Defensive", value = "SelfDefensive" },
-						{ text = "Mana Gain", value = "ManaGain" },						
+                        { text = "Pet", value = "Pet" },
+                        { text = "Nameplates", value = "Nameplates" },                    
                     },
-                    DB = "TrinketType1",
-                    DBV = "Damage",
+                    DB = "aoeDetection",
+                    DBV = "Pet",
                     L = { 
-                        ANY = "First Trinket",
-                    }, 
+                        ANY = "AoE Detection"
+                    },
                     TT = { 
-                        ANY = "Pick what type of trinket you have in your first/upper trinket slot (only matters for trinkets with Use effects).", 
-                    }, 
+                        ANY = "Choose method for AoE detection. Pet only works with Felhound and Sayaad."
+                    },
                     M = {},
-                },	
-				{ -- Trinket Type 2
-                    E = "Dropdown",                                                         
-                    OT = {
-						{ text = "Damage", value = "Damage" },
-						{ text = "Friendly", value = "Friendly" },
-						{ text = "Self Defensive", value = "SelfDefensive" },
-						{ text = "Mana Gain", value = "ManaGain" },						
-                    },
-                    DB = "TrinketType2",
-                    DBV = "Damage",
-                    L = { 
-                        ANY = "Second Trinket",
-                    }, 
-                    TT = { 
-                        ANY = "Pick what type of trinket you have in your second/lower trinket slot (only matters for trinkets with Use effects).", 
-                    }, 
-                    M = {},
-                },				
-			},			
-			{
-                { -- TrinketValue1
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "TrinketValue1",
-                    DBV = 40,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "First Trinket Value",
-                    },
-                    TT = { 
-                        ANY = "HP/Mana (%) to use your first trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
-                    },                     
-                    M = {},
-                },	
-                { -- TrinketValue2
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "TrinketValue2",
-                    DBV = 40,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Second Trinket Value",
-                    },
-                    TT = { 
-                        ANY = "HP/Mana (%) to use your second trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
-                    },                     
-                    M = {},
-                },					
-			},				
-            { -- LAYOUT SPACE   
-                {
-                    E = "LayoutSpace",                                                                         
-                },
-            },
-            {
-                {
-                    E = "Header",
-                    L = {
-                        ANY = " ====== DEFENSIVES ====== ",
-                    },
-                },
-            },
-            {
-                { -- BitterImmunity
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "BitterImmunityHP",
-                    DBV = 40,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Bitter Immunity",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Bitter Immunity.", 
-                    },                     
-                    M = {},
-                },
-                { -- BitterImmunity
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "EnragedRegenerationHP",
-                    DBV = 60,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Enraged Regeneration",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Enraged Regeneration.", 
-                    },                     
-                    M = {},
-                },
-            },	
-            {
-                { -- VictoryRushHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "VictoryRushHP",
-                    DBV = 70,
-                    ONOFF = false,
-                    L = { 
-                        ANY = "Victory Rush HP",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Victory Rush.", 
-                    },                     
-                    M = {},
-                },
-            },				
-            { -- LAYOUT SPACE   
-                {
-                    E = "LayoutSpace",                                                                         
-                },
-            },
-		},
-        [ACTION_CONST_WARRIOR_ARMS] = { 
-            { -- GENERAL OPTIONS FIRST ROW
-                { -- MOUSEOVER
-                    E = "Checkbox", 
-                    DB = "mouseover",
-                    DBV = true,
-                    L = { 
-                        enUS = "Use @mouseover", 
-                        ruRU = "Использовать @mouseover", 
-                        frFR = "Utiliser les fonctions @mouseover",
-                    }, 
-                    TT = { 
-                        enUS = "Will unlock use actions for @mouseover units\nExample: Resuscitate, Healing", 
-                        ruRU = "Разблокирует использование действий для @mouseover юнитов\nНапример: Воскрешение, Хилинг", 
-                        frFR = "Activera les actions via @mouseover\n Exemple: Ressusciter, Soigner",
-                    }, 
-                    M = {},
-                },
-				{ -- AOE
-                    E = "Checkbox", 
-                    DB = "AoE",
-                    DBV = true,
-                    L = { 
-                        enUS = "Use AoE", 
-                        ruRU = "Использовать AoE", 
-                        frFR = "Utiliser l'AoE",
-                    }, 
-                    TT = { 
-                        enUS = "Enable multiunits actions", 
-                        ruRU = "Включает действия для нескольких целей", 
-                        frFR = "Activer les actions multi-unités",
-                    }, 
-                    M = {
-                        Custom = "/run Action.AoEToggleMode()",
-                        -- It does call func CraftMacro(L[CL], macro above, 1) -- 1 means perCharacter tab in MacroUI, if nil then will be used allCharacters tab in MacroUI
-                        Value = value or nil, 
-                        -- Very Very Optional, no idea why it will be need however.. 
-                        TabN = '@number' or nil,                                
-                        Print = '@string' or nil,
-                    },
                 },
             },
             { -- PRIEST HEADER
@@ -551,7 +162,7 @@ A.Data.ProfileUI = {
                     E = "LayoutSpace",                                                                         
                 },
             },
-            {
+            { -- CLEANSE HEADER
                 {
                     E = "Header",
                     L = {
@@ -560,59 +171,638 @@ A.Data.ProfileUI = {
                 },
             },
             {
-                { -- BitterImmunity
+                { -- UnendingResolveHP
                     E = "Slider",                                                     
                     MIN = 0, 
                     MAX = 100,                            
-                    DB = "BitterImmunityHP",
+                    DB = "UnendingResolveHP",
                     DBV = 40,
                     ONOFF = false,
                     L = { 
-                        ANY = "Bitter Immunity HP",
+                        ANY = "Unending Resolve HP (%)",
                     },
                     TT = { 
-                        ANY = "HP (%) to use Bitter Immunity.", 
+                        ANY = "HP (%) to use Unending Resolve.", 
                     },                     
                     M = {},
-                },
-                { -- DiebytheSwordHP
+                },				
+                { -- FelPactHP
                     E = "Slider",                                                     
                     MIN = 0, 
                     MAX = 100,                            
-                    DB = "DiebytheSwordHP",
-                    DBV = 60,
+                    DB = "FelPactHP",
+                    DBV = 75,
                     ONOFF = false,
                     L = { 
-                        ANY = "Die by the Sword HP",
+                        ANY = "Fel Pact HP (%)",
                     },
                     TT = { 
-                        ANY = "HP (%) to use Die by the Sword.", 
+                        ANY = "HP (%) to use Fel Pact.", 
                     },                     
                     M = {},
-                },
+                },						
             },
             {
-                { -- VictoryRushHP
+                { -- MortalCoilHP
                     E = "Slider",                                                     
                     MIN = 0, 
                     MAX = 100,                            
-                    DB = "VictoryRushHP",
-                    DBV = 70,
-                    ONOFF = false,
+                    DB = "MortalCoilHP",
+                    DBV = 60,
+                    ONOFF = true,
                     L = { 
-                        ANY = "Victory Rush HP",
+                        ANY = "Mortal Coil Health (%)",
                     },
                     TT = { 
-                        ANY = "HP (%) to use Victory Rush.", 
+                        ANY = "HP (%) to use Mortal Coil.", 
                     },                     
                     M = {},
-                },
+                },	
+                { -- DrainLife
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "DrainLifeHP",
+                    DBV = 30,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Drain Life Health (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Drain Life.", 
+                    },                     
+                    M = {},
+                },	
             },					
             { -- LAYOUT SPACE   
                 {
                     E = "LayoutSpace",                                                                         
                 },
             },
+            { -- Pet Stuff -- Header
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== PETS ====== ",
+                    },
+                },
+            },
+            { -- Pet Stuff - Content
+                {
+                    E = "Dropdown",                                                         
+                    OT = {
+                        { text = A.GetSpellInfo(688), value = "IMP" },
+                        { text = A.GetSpellInfo(697), value = "VOIDWALKER" },                    
+                        { text = A.GetSpellInfo(691), value = "FELHUNTER" },
+                        { text = A.GetSpellInfo(366222), value = "SAYAAD" },
+                    },
+                    DB = "PetChoice",
+                    DBV = "IMP",
+                    L = { 
+                        enUS = "Pet Selection", 
+                        ruRU = "Выбор питомца", 
+                        frFR = "Sélection du familier",
+                    }, 
+                    TT = { 
+                        enUS = "Choose the pet to summon", 
+                        ruRU = "Выберите питомца для призыва", 
+                        frFR = "Choisir le familier à invoquer",
+                    },
+                    M = {},
+                },
+                { -- Health Funnel
+                    E = "Slider",                                                     
+                    MIN = -1, 
+                    MAX = 100,                            
+                    DB = "HealthFunnelHP",
+                    DBV = 10, 
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Health Funnel HP (%)",
+                    }, 
+                    TT = { 
+                        ANY = "Will use Health Funnel when pet reaches percent HP. Won't use if own HP is critical."
+                    },					
+                    M = {},
+                },					
+            }, 
+        },
+        [ACTION_CONST_WARLOCK_DESTRUCTION] = {  
+            { -- GENERAL HEADER
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== GENERAL ====== ",
+                    },
+                },
+            },            
+            { -- GENERAL OPTIONS FIRST ROW
+				{ -- AOE
+                    E = "Checkbox", 
+                    DB = "AoE",
+                    DBV = true,
+                    L = { 
+                        enUS = "Use AoE", 
+                        ruRU = "Использовать AoE", 
+                        frFR = "Utiliser l'AoE",
+                    }, 
+                    TT = { 
+                        enUS = "Enable multiunits actions", 
+                        ruRU = "Включает действия для нескольких целей", 
+                        frFR = "Activer les actions multi-unités",
+                    }, 
+                    M = {
+                        Custom = "/run Action.AoEToggleMode()",
+                        -- It does call func CraftMacro(L[CL], macro above, 1) -- 1 means perCharacter tab in MacroUI, if nil then will be used allCharacters tab in MacroUI
+                        Value = value or nil, 
+                        -- Very Very Optional, no idea why it will be need however.. 
+                        TabN = '@number' or nil,                                
+                        Print = '@string' or nil,
+                    },
+                },
+                {
+                    E = "Dropdown",                                                         
+                    OT = {
+                        { text = "Pet", value = "Pet" },
+                        { text = "Nameplates", value = "Nameplates" },                    
+                    },
+                    DB = "aoeDetection",
+                    DBV = "Pet",
+                    L = { 
+                        ANY = "AoE Detection"
+                    },
+                    TT = { 
+                        ANY = "Choose method for AoE detection. Pet only works with Felhound and Sayaad."
+                    },
+                    M = {},
+                },
+            },
+            { -- PRIEST HEADER
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== TRINKETS ====== ",
+                    },
+                },
+            },
+			{
+				{ -- Trinket Type 1
+                    E = "Dropdown",                                                         
+                    OT = {
+						{ text = "Damage", value = "Damage" },
+						{ text = "Friendly", value = "Friendly" },
+						{ text = "Self Defensive", value = "SelfDefensive" },
+						{ text = "Mana Gain", value = "ManaGain" },						
+                    },
+                    DB = "TrinketType1",
+                    DBV = "Damage",
+                    L = { 
+                        ANY = "First Trinket",
+                    }, 
+                    TT = { 
+                        ANY = "Pick what type of trinket you have in your first/upper trinket slot (only matters for trinkets with Use effects).", 
+                    }, 
+                    M = {},
+                },	
+				{ -- Trinket Type 2
+                    E = "Dropdown",                                                         
+                    OT = {
+						{ text = "Damage", value = "Damage" },
+						{ text = "Friendly", value = "Friendly" },
+						{ text = "Self Defensive", value = "SelfDefensive" },
+						{ text = "Mana Gain", value = "ManaGain" },						
+                    },
+                    DB = "TrinketType2",
+                    DBV = "Damage",
+                    L = { 
+                        ANY = "Second Trinket",
+                    }, 
+                    TT = { 
+                        ANY = "Pick what type of trinket you have in your second/lower trinket slot (only matters for trinkets with Use effects).", 
+                    }, 
+                    M = {},
+                },				
+			},			
+			{
+                { -- TrinketValue1
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "TrinketValue1",
+                    DBV = 40,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "First Trinket Value",
+                    },
+                    TT = { 
+                        ANY = "HP/Mana (%) to use your first trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
+                    },                     
+                    M = {},
+                },	
+                { -- TrinketValue2
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "TrinketValue2",
+                    DBV = 40,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "Second Trinket Value",
+                    },
+                    TT = { 
+                        ANY = "HP/Mana (%) to use your second trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
+                    },                     
+                    M = {},
+                },					
+			},				
+            { -- LAYOUT SPACE   
+                {
+                    E = "LayoutSpace",                                                                         
+                },
+            },
+            { -- CLEANSE HEADER
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== DEFENSIVES ====== ",
+                    },
+                },
+            },
+            {
+                { -- UnendingResolveHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "UnendingResolveHP",
+                    DBV = 40,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "Unending Resolve HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Unending Resolve.", 
+                    },                     
+                    M = {},
+                },				
+                { -- FelPactHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "FelPactHP",
+                    DBV = 75,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "Fel Pact HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Fel Pact.", 
+                    },                     
+                    M = {},
+                },						
+            },
+            {
+                { -- MortalCoilHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "MortalCoilHP",
+                    DBV = 60,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Mortal Coil Health (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Mortal Coil.", 
+                    },                     
+                    M = {},
+                },	
+                { -- DrainLife
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "DrainLifeHP",
+                    DBV = 30,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Drain Life Health (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Drain Life.", 
+                    },                     
+                    M = {},
+                },	
+            },					
+            { -- LAYOUT SPACE   
+                {
+                    E = "LayoutSpace",                                                                         
+                },
+            },
+            { -- Pet Stuff -- Header
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== PETS ====== ",
+                    },
+                },
+            },
+            { -- Pet Stuff - Content
+                {
+                    E = "Dropdown",                                                         
+                    OT = {
+                        { text = A.GetSpellInfo(688), value = "IMP" },
+                        { text = A.GetSpellInfo(697), value = "VOIDWALKER" },                    
+                        { text = A.GetSpellInfo(691), value = "FELHUNTER" },
+                        { text = A.GetSpellInfo(366222), value = "SAYAAD" },
+                    },
+                    DB = "PetChoice",
+                    DBV = "IMP",
+                    L = { 
+                        enUS = "Pet Selection", 
+                        ruRU = "Выбор питомца", 
+                        frFR = "Sélection du familier",
+                    }, 
+                    TT = { 
+                        enUS = "Choose the pet to summon", 
+                        ruRU = "Выберите питомца для призыва", 
+                        frFR = "Choisir le familier à invoquer",
+                    },
+                    M = {},
+                },
+                { -- Health Funnel
+                    E = "Slider",                                                     
+                    MIN = -1, 
+                    MAX = 100,                            
+                    DB = "HealthFunnelHP",
+                    DBV = 10, 
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Health Funnel HP (%)",
+                    }, 
+                    TT = { 
+                        ANY = "Will use Health Funnel when pet reaches percent HP. Won't use if own HP is critical."
+                    },					
+                    M = {},
+                },					
+            }, 
+        },
+        [ACTION_CONST_WARLOCK_DEMONOLOGY] = {  
+            { -- GENERAL HEADER
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== GENERAL ====== ",
+                    },
+                },
+            },            
+            { -- GENERAL OPTIONS FIRST ROW
+                { -- AOE
+                    E = "Checkbox", 
+                    DB = "AoE",
+                    DBV = true,
+                    L = { 
+                        enUS = "Use AoE", 
+                        ruRU = "Использовать AoE", 
+                        frFR = "Utiliser l'AoE",
+                    }, 
+                    TT = { 
+                        enUS = "Enable multiunits actions", 
+                        ruRU = "Включает действия для нескольких целей", 
+                        frFR = "Activer les actions multi-unités",
+                    }, 
+                    M = {
+                        Custom = "/run Action.AoEToggleMode()",
+                        -- It does call func CraftMacro(L[CL], macro above, 1) -- 1 means perCharacter tab in MacroUI, if nil then will be used allCharacters tab in MacroUI
+                        Value = value or nil, 
+                        -- Very Very Optional, no idea why it will be need however.. 
+                        TabN = '@number' or nil,                                
+                        Print = '@string' or nil,
+                    },
+                },
+                {
+                    E = "Dropdown",                                                         
+                    OT = {
+                        { text = "Pet", value = "Pet" },
+                        { text = "Nameplates", value = "Nameplates" },                    
+                    },
+                    DB = "aoeDetection",
+                    DBV = "Pet",
+                    L = { 
+                        ANY = "AoE Detection"
+                    },
+                    TT = { 
+                        ANY = "Choose method for AoE detection. Pet only works with Felhound and Sayaad."
+                    },
+                    M = {},
+                },
+            },
+            { -- PRIEST HEADER
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== TRINKETS ====== ",
+                    },
+                },
+            },
+            {
+                { -- Trinket Type 1
+                    E = "Dropdown",                                                         
+                    OT = {
+                        { text = "Damage", value = "Damage" },
+                        { text = "Friendly", value = "Friendly" },
+                        { text = "Self Defensive", value = "SelfDefensive" },
+                        { text = "Mana Gain", value = "ManaGain" },						
+                    },
+                    DB = "TrinketType1",
+                    DBV = "Damage",
+                    L = { 
+                        ANY = "First Trinket",
+                    }, 
+                    TT = { 
+                        ANY = "Pick what type of trinket you have in your first/upper trinket slot (only matters for trinkets with Use effects).", 
+                    }, 
+                    M = {},
+                },	
+                { -- Trinket Type 2
+                    E = "Dropdown",                                                         
+                    OT = {
+                        { text = "Damage", value = "Damage" },
+                        { text = "Friendly", value = "Friendly" },
+                        { text = "Self Defensive", value = "SelfDefensive" },
+                        { text = "Mana Gain", value = "ManaGain" },						
+                    },
+                    DB = "TrinketType2",
+                    DBV = "Damage",
+                    L = { 
+                        ANY = "Second Trinket",
+                    }, 
+                    TT = { 
+                        ANY = "Pick what type of trinket you have in your second/lower trinket slot (only matters for trinkets with Use effects).", 
+                    }, 
+                    M = {},
+                },				
+            },			
+            {
+                { -- TrinketValue1
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "TrinketValue1",
+                    DBV = 40,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "First Trinket Value",
+                    },
+                    TT = { 
+                        ANY = "HP/Mana (%) to use your first trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
+                    },                     
+                    M = {},
+                },	
+                { -- TrinketValue2
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "TrinketValue2",
+                    DBV = 40,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "Second Trinket Value",
+                    },
+                    TT = { 
+                        ANY = "HP/Mana (%) to use your second trinket, based on what you've chosen for your trinket type. Damage trinkets will be used on burst targets.", 
+                    },                     
+                    M = {},
+                },					
+            },				
+            { -- LAYOUT SPACE   
+                {
+                    E = "LayoutSpace",                                                                         
+                },
+            },
+            { -- CLEANSE HEADER
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== DEFENSIVES ====== ",
+                    },
+                },
+            },
+            {
+                { -- UnendingResolveHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "UnendingResolveHP",
+                    DBV = 40,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "Unending Resolve HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Unending Resolve.", 
+                    },                     
+                    M = {},
+                },				
+                { -- FelPactHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "FelPactHP",
+                    DBV = 75,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "Fel Pact HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Fel Pact.", 
+                    },                     
+                    M = {},
+                },						
+            },
+            {
+                { -- MortalCoilHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "MortalCoilHP",
+                    DBV = 60,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Mortal Coil Health (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Mortal Coil.", 
+                    },                     
+                    M = {},
+                },	
+                { -- DrainLife
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "DrainLifeHP",
+                    DBV = 30,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Drain Life Health (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Drain Life.", 
+                    },                     
+                    M = {},
+                },	
+            },					
+            { -- LAYOUT SPACE   
+                {
+                    E = "LayoutSpace",                                                                         
+                },
+            },
+            { -- Pet Stuff -- Header
+                {
+                    E = "Header",
+                    L = {
+                        ANY = " ====== PETS ====== ",
+                    },
+                },
+            },
+            { -- Pet Stuff - Content
+                {
+                    E = "Dropdown",                                                         
+                    OT = {
+                        { text = A.GetSpellInfo(688), value = "IMP" },
+                        { text = A.GetSpellInfo(697), value = "VOIDWALKER" },                    
+                        { text = A.GetSpellInfo(691), value = "FELHUNTER" },
+                        { text = A.GetSpellInfo(366222), value = "SAYAAD" },
+                        { text = A.GetSpellInfo(30146), value = "FELGUARD" },
+                    },
+                    DB = "PetChoice",
+                    DBV = "IMP",
+                    L = { 
+                        enUS = "Pet Selection", 
+                        ruRU = "Выбор питомца", 
+                        frFR = "Sélection du familier",
+                    }, 
+                    TT = { 
+                        enUS = "Choose the pet to summon", 
+                        ruRU = "Выберите питомца для призыва", 
+                        frFR = "Choisir le familier à invoquer",
+                    },
+                    M = {},
+                },
+                { -- Health Funnel
+                    E = "Slider",                                                     
+                    MIN = -1, 
+                    MAX = 100,                            
+                    DB = "HealthFunnelHP",
+                    DBV = 10, 
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Health Funnel HP (%)",
+                    }, 
+                    TT = { 
+                        ANY = "Will use Health Funnel when pet reaches percent HP. Won't use if own HP is critical."
+                    },					
+                    M = {},
+                },					
+            }, 
         },
     },
-}	
+}

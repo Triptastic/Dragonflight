@@ -129,6 +129,7 @@ Action[ACTION_CONST_PRIEST_SHADOW] = {
     DarkReveries		        = Action.Create({ Type = "Spell", ID = 394963, Hidden = true   }),
     GatheringShadows	        = Action.Create({ Type = "Spell", ID = 394961, Hidden = true   }),
     ScreamsoftheVoid	        = Action.Create({ Type = "Spell", ID = 375767, Hidden = true   }),
+    Healthstone     = Action.Create({ Type = "Item", ID = 5512 }),
 }
 
 local A = setmetatable(Action[ACTION_CONST_PRIEST_SHADOW], { __index = Action })
@@ -191,6 +192,19 @@ local function SelfDefensives()
             end
         end
     end
+
+	local Healthstone = A.GetToggle(2, "HealthstoneHP") 
+	if Healthstone >= 0 then 
+		if A.Healthstone:IsReadyByPassCastGCD(player) then 					
+			if Healthstone >= 100 then -- AUTO 
+				if Unit(player):TimeToDie() <= 9 and Unit(player):HealthPercent() <= 40 then 
+					return A.Healthstone
+				end 
+			elseif Unit(player):HealthPercent() <= Healthstone then 
+				return A.Healthstone							 
+			end
+		end
+	end
 
     local DispersionHP = A.GetToggle(2, "DispersionHP")
 	if A.Dispersion:IsReady(player) and Unit(player):HealthPercent() <= DispersionHP then

@@ -224,6 +224,7 @@ Action[ACTION_CONST_MONK_WINDWALKER] = {
 	FastFeet       = Action.Create({ Type = "Spell", ID = 388809 }),
 	GraceoftheCrane= Action.Create({ Type = "Spell", ID = 388811 }),
 	VivaciousVivification= Action.Create({ Type = "Spell", ID = 388812 }),
+    VivaciousVivificationBuff= Action.Create({ Type = "Spell", ID = 392883 }),
 	ExpeditiousFortification= Action.Create({ Type = "Spell", ID = 388813 }),
 	IronshellBrew  = Action.Create({ Type = "Spell", ID = 388814 }),
 	WideningWhirl  = Action.Create({ Type = "Spell", ID = 388846 }),
@@ -302,22 +303,49 @@ local Temp = {
     DisablePhys                             = {"TotalImun", "DamagePhysImun", "Freedom", "CCTotalImun"},
     DisableMag                              = {"TotalImun", "DamageMagicImun", "Freedom", "CCTotalImun"},
     useOpener                               = false,
-	useDiffuseMagic							= { 371984 -- Ice Bolt
-
-	},
-	useDampenHarm							= {
-
-	},
-	useFortifyingBrew						= {
-
-	},
-	useZenMeditation						= {
-
-	},
+	incomingAoEDamage                       = { 372735, -- Tectonic Slam (RLP)
+												385536, -- Flame Dance (RLP)
+												392488, -- Lightning Storm (RLP)
+												392486, -- Lightning Storm (RLP)
+												372863, -- Ritual of Blazebinding (RLP)
+												373680, 373688, -- Frost Overload (RLP)
+												374720, -- Consuming Stomp (AV)
+												384132, -- Overwhelming Energy (AV)
+												388804, -- Unleashed Destruction (AV)
+												388817, -- Shards of Stone (NO)
+												387135, -- Arcing Strike (NO)
+												387145, -- Totemic Overload (NO)
+												386012, -- Stormbolt (NO)
+												386025, -- Tempest (NO)
+												384620, -- Electrical Storm (NO)
+												387411, -- Death Bolt Volley (NO)
+												387145, -- Totemic Overload (NO)
+												377004, -- Deafening Screech (AA)
+												388537, -- Arcane Fissue (AA)
+												388923, -- Burst Forth (AA)
+												212784, -- Eye Storm (CoS)
+												211406, -- Firebolt (CoS)
+												207906, -- Burning Intensity (CoS)
+												207881, -- Infernal Eruption (CoS)
+												397892, -- Scream of Pain (CoS)
+												153094, -- Whispers of the Dark Star (SBG)
+												164974, -- Dark Eclipse (SBG)
+												192305, -- Eye of the Storm (mini-boss)
+                                                200901, -- Eye of the Storm (boss)
+                                                153804, -- Inhale
+                                                175988, -- Omen of Death
+                                                106228, -- Nothingness
+                                                388008, -- Absolute Zero
+                                                191284, -- Horn of Valor (HoV)
+                                                241687, -- Sonic Scream (DPS Mage Tower)
+    },
 }
 
-local function SelfDefensives()
+local function SelfDefensives()	
+    local AllowOverlap = A.GetToggle(2, "AllowOverlap")
 	local HealingElixirHP = A.GetToggle(2, "HealingElixirHP")	
+	local FortifyingBrewHP = A.GetToggle(2, "FortifyingBrewHP")
+    local DampenHarmHP = A.GetToggle(2, "DampenHarmHP")	
 
 	if Unit(player):CombatTime() == 0 then 
         return 
@@ -330,6 +358,39 @@ local function SelfDefensives()
 	if A.HealingElixir:IsReady(player) and Unit(player):HealthPercent() <= HealingElixirHP then
 		return A.HealingElixir
 	end
+	
+	local noDefensiveActive = Unit(player):HasBuffs(A.DampenHarm.ID) == 0 and Unit(player):HasBuffs(A.DiffuseMagic.ID) == 0 and Unit(player):HasBuffs(A.FortifyingBrew.ID) == 0 and Unit(player):HasBuffs(A.TouchofKarma.ID) == 0
+
+    local useRacial = A.GetToggle(1, "Racial")
+
+    if noDefensiveActive then
+        if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1 then
+            if A.TouchofKarma:IsReady(player) then
+                return A.TouchofKarma
+            end
+            if A.DiffuseMagic:IsReady(player) then
+                return A.DiffuseMagic
+            end
+            if A.DampenHarm:IsReady(player) then
+                return A.DampenHarm
+            end
+            if A.FortifyingBrew:IsReady(player) then
+                return A.FortifyingBrew
+            end
+        end
+    end
+
+	if A.FortifyingBrew:IsReady(player) and Unit(player):HealthPercent() <= FortifyingBrewHP and (Unit(player):HasBuffs(A.DampenHarm.ID) == 0 or AllowOverlap) then
+		return A.FortifyingBrew
+	end
+	
+	if A.DampenHarm:IsReady(player) and Unit(player):HealthPercent() <= DampenHarmHP and (Unit(player):HasBuffs(A.FortifyingBrew.ID) == 0 or AllowOverlap) then
+		return A.DampenHarm
+	end
+
+	if A.Fireblood:IsRacialReady("player", true) and not A.IsInPvP and A.AuraIsValid("player", "UseDispel", "Dispel") then 
+		return A.Fireblood
+	end 
 
 end 
 SelfDefensives = A.MakeFunctionCachedStatic(SelfDefensives)
@@ -342,7 +403,7 @@ local function Interrupts(unitID)
             return A.SpearHandStrike
         end
 		
-        if useCC and A.LegSweep:IsReady(unitID) then 
+        if useCC and A.LegSweep:IsReady(player) and A.TigerPalm:IsInRange(unitID) then 
             return A.LegSweep
         end		
 
@@ -421,10 +482,6 @@ local function InMelee(unitID)
 	return A.TigerPalm:IsInRange(unitID)
 end 
 
-local function ToK(unitID)
-
-
-end
 
 --- ======= ACTION LISTS =======
 -- [3] Single Rotation
@@ -451,6 +508,22 @@ A[3] = function(icon, isMulti)
     ---------------- ENEMY UNIT ROTATION -----------------
     ------------------------------------------------------
     local function EnemyRotation(unitID)
+
+        --Temp Mage Tower
+        if A.Vivify:IsReady(player) and Unit(player):HasBuffs(A.VivaciousVivification.ID) > 0 and Unit(player):HealthPercent() <= 80 then
+            return A.Vivify:Show(icon)
+        end
+
+        -- Interrupts
+        local Interrupt = Interrupts(unitID)
+        if Interrupt then 
+            return Interrupt:Show(icon)
+        end 
+
+        local UseTrinket = UseTrinkets(unitID)
+        if UseTrinket then
+            return UseTrinket:Show(icon)
+        end  
 
         if BurstIsON(unitID) and InMelee() then
             if A.InvokeXuentheWhiteTiger:IsReady(player) then

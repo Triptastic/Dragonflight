@@ -65,6 +65,23 @@ A.Data.ProfileUI = {
                         ANY = " ====== DEFENSIVES ====== ",
                     },
                 },
+            },
+            {
+                { -- HealthstoneHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "HealthstoneHP",
+                    DBV = 20,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Healthstone HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Healthstone.", 
+                    },                     
+                    M = {},
+                },	
             },	
 			{
                 { -- DispersionHP
@@ -276,6 +293,21 @@ A.Data.ProfileUI = {
                 },
             },	
             {
+                { -- HealthstoneHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "HealthstoneHP",
+                    DBV = 20,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Healthstone HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Healthstone.", 
+                    },                     
+                    M = {},
+                },	
                 { -- DesperatePrayerHP
                     E = "Slider",                                                     
                     MIN = 0, 
@@ -486,25 +518,28 @@ A.Data.ProfileUI = {
                     DBV = 100,
                     ONOFF = true,
                     L = { 
-                        ANY = "Flash Heal HP (%)",
+                        ANY = "Flash Heal No SoL HP (%)",
                     },
                     TT = { 
-                        ANY = "HP (%) to use Flash Heal.", 
+                        ANY = "HP (%) to use Flash Heal without Surge of Light.", 
                     },                     
                     M = {},
                 },			
-                { -- Cleanse
-                    E = "Checkbox", 
-                    DB = "onlySoL",
-                    DBV = true,
+                { -- FlashHealHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "FlashHealSoLHP",
+                    DBV = 100,
+                    ONOFF = true,
                     L = { 
-                        ANY = "Only Flash Heal with Surge of Light Buff",
-                    }, 
+                        ANY = "Flash Heal SoL HP (%)",
+                    },
                     TT = { 
-                        ANY = "Only use Flash Heal when you have the Surge of Light buff.",
-                    }, 
+                        ANY = "HP (%) to use Flash Heal with Surge of Light.", 
+                    },                     
                     M = {},
-                },
+                },		
 			},	
             {
                 { -- PowerWordRadianceHP
@@ -641,8 +676,23 @@ A.Data.ProfileUI = {
                         ANY = " ====== DEFENSIVES ====== ",
                     },
                 },
-            },	
+            },
             {
+                { -- HealthstoneHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "HealthstoneHP",
+                    DBV = 20,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Healthstone HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Healthstone.", 
+                    },                     
+                    M = {},
+                },	
                 { -- DesperatePrayerHP
                     E = "Slider",                                                     
                     MIN = 0, 

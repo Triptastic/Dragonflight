@@ -57,7 +57,7 @@ Action[ACTION_CONST_WARRIOR_FURY] = {
     BagofTricks					= Action.Create({ Type = "Spell", ID = 312411	}),
     WilloftheForsaken			= Action.Create({ Type = "Spell", ID = 7744		}),   
     EscapeArtist				= Action.Create({ Type = "Spell", ID = 20589    }), 
-    EveryManforHimself			= Action.Create({ Type = "Spell", ID = 59752    }),
+    WilltoSurvive   			= Action.Create({ Type = "Spell", ID = 59752    }),
     LightsJudgment				= Action.Create({ Type = "Spell", ID = 255647   }), 	
 
     --General
@@ -97,7 +97,9 @@ Action[ACTION_CONST_WARRIOR_FURY] = {
     
     --Fury
     Bloodthirst				= Action.Create({ Type = "Spell", ID = 23881   }), 
-    RagingBlow				= Action.Create({ Type = "Spell", ID = 85288   }), 
+    Bloodbath				= Action.Create({ Type = "Spell", ID = 335096   }), 
+    RagingBlow      		= Action.Create({ Type = "Spell", ID = 85288   }), 
+    CrushingBlow				= Action.Create({ Type = "Spell", ID = 335097   }), 
     EnragedRegeneration				= Action.Create({ Type = "Spell", ID = 184364   }),
     Rampage 				= Action.Create({ Type = "Spell", ID = 184367   }),  
     Recklessness				= Action.Create({ Type = "Spell", ID = 1719   }),
@@ -109,6 +111,7 @@ Action[ACTION_CONST_WARRIOR_FURY] = {
     TitansTorment				= Action.Create({ Type = "Spell", ID = 390135   }),    
     TitanicRage				= Action.Create({ Type = "Spell", ID = 394329   }),
     MeatCleaver				= Action.Create({ Type = "Spell", ID = 280392   }),  
+    MeatCleaverBuff				= Action.Create({ Type = "Spell", ID = 85739   }),
     ImprovedWhirlwind				= Action.Create({ Type = "Spell", ID = 12950   }),
     AshenJuggernaut				= Action.Create({ Type = "Spell", ID = 392536   }),   
     WrathandFury				= Action.Create({ Type = "Spell", ID = 392936   }),  
@@ -116,6 +119,8 @@ Action[ACTION_CONST_WARRIOR_FURY] = {
     RecklessAbandon				= Action.Create({ Type = "Spell", ID = 396749   }),  
     Tenderize				= Action.Create({ Type = "Spell", ID = 388933   }),
     DancingBlades				= Action.Create({ Type = "Spell", ID = 391683   }),
+
+    Healthstone     = Action.Create({ Type = "Item", ID = 5512 }),
 }
 
 local A = setmetatable(Action[ACTION_CONST_WARRIOR_FURY], { __index = Action })
@@ -142,6 +147,44 @@ local Temp = {
 	TotalAndMagKick                         = {"TotalImun", "DamageMagicImun", "KickImun"},
     DisablePhys                             = {"TotalImun", "DamagePhysImun", "Freedom", "CCTotalImun"},
     DisableMag                              = {"TotalImun", "DamageMagicImun", "Freedom", "CCTotalImun"},
+    incomingAoEDamage                       = { 
+                                                192305, -- Eye of the Storm (mini-boss)
+                                                200901, -- Eye of the Storm (boss)
+                                                153804, -- Inhale
+                                                175988, -- Omen of Death
+                                                106228, -- Nothingness
+                                                388008, -- Absolute Zero
+                                                191284, -- Horn of Valor (HoV)
+    },
+    incAoEMagic                             = { 372735, -- Tectonic Slam (RLP)
+                                                385536, -- Flame Dance (RLP)
+                                                392488, -- Lightning Storm (RLP)
+                                                392486, -- Lightning Storm (RLP)
+                                                372863, -- Ritual of Blazebinding (RLP)
+                                                373680, 373688, -- Frost Overload (RLP)
+                                                374720, -- Consuming Stomp (AV)
+                                                384132, -- Overwhelming Energy (AV)
+                                                388804, -- Unleashed Destruction (AV)
+                                                388817, -- Shards of Stone (NO)
+                                                387135, -- Arcing Strike (NO)
+                                                387145, -- Totemic Overload (NO)
+                                                386012, -- Stormbolt (NO)
+                                                386025, -- Tempest (NO)
+                                                384620, -- Electrical Storm (NO)
+                                                387411, -- Death Bolt Volley (NO)
+                                                387145, -- Totemic Overload (NO)
+                                                377004, -- Deafening Screech (AA)
+                                                388537, -- Arcane Fissue (AA)
+                                                388923, -- Burst Forth (AA)
+                                                212784, -- Eye Storm (CoS)
+                                                211406, -- Firebolt (CoS)
+                                                207906, -- Burning Intensity (CoS)
+                                                207881, -- Infernal Eruption (CoS)
+                                                397892, -- Scream of Pain (CoS)
+                                                153094, -- Whispers of the Dark Star (SBG)
+                                                164974, -- Dark Eclipse (SBG)
+
+    },
 }
 
 local function InMelee(unitID)
@@ -159,6 +202,50 @@ local function SelfDefensives()
         unitID = "target"
     end  
 
+	if A.CanUseHealthstoneOrHealingPotion() then
+		return A.Healthstone
+	end
+
+    local noDefensiveActive = Unit(player):HasBuffs(A.EnragedRegeneration.ID) == 0 and Unit(player):HasBuffs(A.RallyingCry.ID) == 0 and Unit(player):HasBuffs(A.DefensiveStance.ID) == 0 and Unit(player):HasBuffs(A.SpellReflection.ID) == 0
+
+    local useRacial = A.GetToggle(1, "Racial")
+
+    if noDefensiveActive then
+        if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incAoEMagic) >= 1 then
+            if A.SpellReflection:IsReady(player) then
+                return A.SpellReflection
+            end
+            if A.EnragedRegeneration:IsReady(player) then
+                return A.EnragedRegeneration
+            end
+            if A.RallyingCry:IsReady(player) then
+                return A.RallyingCry:Show(icon)
+            end
+            if A.DefensiveStance:IsReady(player) then
+                return A.DefensiveStance:Show(icon)
+            end
+        end
+        if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1 then
+            if A.EnragedRegeneration:IsReady(player) then
+                return A.EnragedRegeneration
+            end
+            if A.RallyingCry:IsReady(player) then
+                return A.RallyingCry:Show(icon)
+            end
+            if A.DefensiveStance:IsReady(player) then
+                return A.DefensiveStance:Show(icon)
+            end
+        end
+    end
+
+	if A.BerserkerRage:IsReady(player) and (LoC:Get("FEAR") > 0 or LoC:Get("INCAPACITATE") > 0) then
+		return A.BerserkerRage
+	end
+
+	if A.WilltoSurvive:IsReady(player) and useRacial and LoC:Get("STUN") > 0 then
+		return A.WilltoSurvive
+	end
+
     local BitterImmunityHP = A.GetToggle(2, "BitterImmunityHP")
     if A.BitterImmunity:IsReady(player) and Unit(player):HealthPercent() <= BitterImmunityHP then
         return A.BitterImmunity
@@ -169,6 +256,11 @@ local function SelfDefensives()
         return A.EnragedRegeneration
     end
 
+    local VictoryRushHP = A.GetToggle(2, "VictoryRushHP")
+    if A.VictoryRush:IsReady(player) and Unit(player):HealthPercent() <= VictoryRushHP then
+        return A.VictoryRush
+    end
+
 end 
 SelfDefensives = A.MakeFunctionCachedStatic(SelfDefensives)
 
@@ -177,9 +269,31 @@ local function Interrupts(unitID)
     local useKick, useCC, useRacial, notInterruptable, castRemainsTime, castDoneTime = Action.InterruptIsValid(unitID, nil, nil, true)
 	
 	if castRemainsTime >= A.GetLatency() then
-        if useKick and not notInterruptable and A.Pummel:IsReady(unitID) then 
+        if useKick and not notInterruptable and A.Pummel:IsReady(unitID, nil, nil, true) then 
             return A.Pummel
         end
+        if useCC and A.StormBolt:IsReady(unitID) then 
+            return A.StormBolt
+        end
+        if useCC and A.IntimidatingShout:IsReady(unitID) then 
+            return A.IntimidatingShout
+        end
+
+        if useRacial and A.QuakingPalm:AutoRacial(unitID) then 
+            return A.QuakingPalm
+        end 
+ 
+        if useRacial and A.Haymaker:AutoRacial(unitID) then 
+         return A.Haymaker
+        end 
+ 
+        if useRacial and A.WarStomp:AutoRacial(unitID) then 
+         return A.WarStomp
+        end 
+ 
+        if useRacial and A.BullRush:AutoRacial(unitID) then 
+         return A.BullRush
+        end 
     end
 end
 
@@ -237,9 +351,9 @@ A[3] = function(icon, isMulti)
     local inCombat = Unit(player):CombatTime() > 0
 	local combatTime = Unit(player):CombatTime()
     local ShouldStop = Action.ShouldStop()
+    local TTD = MultiUnits.GetByRangeAreaTTD(10)
 
     local function DamageRotation(unitID)
-
 
         -- Defensive
         local SelfDefensive = SelfDefensives()
@@ -254,7 +368,7 @@ A[3] = function(icon, isMulti)
         end 
 
         --actions.precombat+=/berserker_stance,toggle=on
-        if A.BerserkerStance:IsReady(player) and Unit(player):HasBuffs(A.BerserkerStance.ID) == 0 and Unit(player):HasBuffs(A.DefensiveStance.ID) == 0 then
+        if A.BerserkerStance:IsReady(player) and Unit(player):HasBuffs(A.BerserkerStance.ID) == 0 and MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incAoEMagic) == 0 and MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) == 0 then
             return A.BerserkerStance:Show(icon)
         end
         
@@ -267,22 +381,22 @@ A[3] = function(icon, isMulti)
 
             local useRacial = A.GetToggle(1, "Racial")
             --actions+=/ravager,if=cooldown.avatar.remains<3
-            if A.Ravager:IsReady(player) and Unit(unitID):GetRange() <= 40 and A.Avatar:GetCooldown() < 3 then
+            if A.Ravager:IsReady(player) and Unit(unitID):GetRange() <= 10 and not isMoving and (A.Avatar:GetCooldown() < 3 or not A.Avatar:IsTalentLearned()) then
                 return A.Ravager:Show(icon)
             end
 
             --actions+=/use_items
             local UseTrinket = UseTrinkets(unitID)
-            if UseTrinket then
+            if UseTrinket and Unit(unitID):GetRange() <= 10 then
                 return UseTrinket:Show(icon)
             end        
 
             --actions+=/blood_fury
-            if A.BloodFury:IsReady(player) and useRacial and InMelee() then
+            if A.BloodFury:IsReady(player) and Unit(unitID):GetRange() <= 10 and useRacial and InMelee() then
                 return A.BloodFury:Show(icon)
             end
             --actions+=/berserking,if=buff.recklessness.up
-            if A.Berserking:IsReady(player) and useRacial and InMelee() and Unit(player):HasBuffs(A.Recklessness.ID) > 0 then
+            if A.Berserking:IsReady(player) and Unit(unitID):GetRange() <= 10 and useRacial and InMelee() and Unit(player):HasBuffs(A.Recklessness.ID) > 0 then
                 return A.Berserking:Show(icon)
             end
             --actions+=/lights_judgment,if=buff.recklessness.down
@@ -290,20 +404,20 @@ A[3] = function(icon, isMulti)
                 return A.LightsJudgment:Show(icon)
             end
             --actions+=/fireblood
-            if A.Fireblood:IsReady(player) and useRacial and InMelee() then
+            if A.Fireblood:IsReady(player) and Unit(unitID):GetRange() <= 10 and useRacial and InMelee() then
                 return A.Fireblood:Show(icon)
             end
             --actions+=/ancestral_call
-            if A.AncestralCall:IsReady(player) and useRacial and InMelee() then
+            if A.AncestralCall:IsReady(player) and Unit(unitID):GetRange() <= 10 and useRacial and InMelee() then
                 return A.Ancestralcall:Show(icon)
             end
             --actions+=/bag_of_tricks,if=buff.recklessness.down&buff.enrage.up
-            if A.BagofTricks:IsReady(player) and useRacial and Unit(player):HasBuffs(A.Recklessness.ID) == 0 and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
+            if A.BagofTricks:IsReady(player) and Unit(unitID):GetRange() <= 10 and useRacial and Unit(player):HasBuffs(A.Recklessness.ID) == 0 and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
                 return A.BagofTricks:Show(icon)
             end
 
             --actions+=/avatar,if=talent.titans_torment&buff.enrage.up&raid_event.adds.in>15|!talent.titans_torment&(buff.recklessness.up|boss&fight_remains<20)
-            if A.Avatar:IsReady(player) and inMelee() then
+            if A.Avatar:IsReady(player) and Unit(unitID):GetRange() <= 10 and A.Ravager:GetCooldown() > 20 then
                 if (A.TitansTorment:IsTalentLearned() and Unit(player):HasBuffs(A.Enrage.ID) > 0) or (not A.TitansTorment:IsTalentLearned() and (Unit(player):HasBuffs(A.Recklessness.ID) > 0 or (Unit(unitID):IsBoss() and Unit(unitID):TimeToDie() < 20))) then
                     return A.Avatar:Show(icon)
                 end
@@ -311,12 +425,12 @@ A[3] = function(icon, isMulti)
             
             --actions+=/recklessness,if=!raid_event.adds.exists&(talent.annihilator&cooldown.avatar.remains<1|cooldown.avatar.remains>40|!talent.avatar|boss&fight_remains<12)
             --actions+=/recklessness,if=!raid_event.adds.exists&!talent.annihilator|boss&fight_remains<12
-            if A.Recklessness:IsReady(player) and MultiUnits:GetByRangeInCombat(40, 2) == 1 and InMelee() and (not A.Annihilator:IsTalentLearned() or(A.Annihilator:IsTalentLearned() and A.Avatar:GetCooldown() < 1) or (A.Avatar:GetCooldown() > 40) or (not A.Avatar:IsTalentLearned()) or (Unit(unitID):IsBoss() and Unit(unitID):TimeToDie() < 12)) then
+            if A.Recklessness:IsReady(player) and Unit(unitID):GetRange() <= 10 and MultiUnits:GetByRangeInCombat(40, 2) == 1 and InMelee() and (not A.Annihilator:IsTalentLearned() or(A.Annihilator:IsTalentLearned() and A.Avatar:GetCooldown() < 1) or (A.Avatar:GetCooldown() > 40) or (not A.Avatar:IsTalentLearned()) or (Unit(unitID):IsBoss() and Unit(unitID):TimeToDie() < 12)) then
                 return A.Recklessness:Show(icon)
             end
 
             --actions+=/spear_of_bastion,if=buff.enrage.up&(buff.recklessness.up|buff.avatar.up|boss&fight_remains<20|active_enemies>1)&raid_event.adds.in>15
-            if A.SpearofBastion:IsReady(player) and Unit(unitID):GetRange() <= 25 and Unit(player):HasBuffs(A.Enrage.ID) > 0 and (Unit(player):HasBuffs(A.Recklessness.ID) > 0 or Unit(player):HasBuffs(A.Avatar.ID) > 0 or (Unit(unitID):IsBoss() and Unit(unitID):TimeToDie() < 20) or MultiUnits:GetByRange(25, 3) > 2) then
+            if A.SpearofBastion:IsReady(player) and Unit(unitID):GetRange() <= 10 and not isMoving and Unit(unitID):GetRange() <= 25 and Unit(player):HasBuffs(A.Enrage.ID) > 0 and (Unit(player):HasBuffs(A.Recklessness.ID) > 0 or Unit(player):HasBuffs(A.Avatar.ID) > 0 or (Unit(unitID):IsBoss() and Unit(unitID):TimeToDie() < 20) or MultiUnits:GetByRange(25, 3) > 2) then
                 return A.SpearofBastion:Show(icon)
             end
         
@@ -326,17 +440,17 @@ A[3] = function(icon, isMulti)
         local function MultiTarget(unitID)
         
             --actions.multi_target+=/recklessness,if=raid_event.adds.in>15|active_enemies>1|boss&fight_remains<12
-            if A.Recklessness:IsReady(player) and BurstIsON(unitID) then
+            if A.Recklessness:IsReady(player) and Unit(unitID):GetRange() <= 10 and BurstIsON(unitID) and TTD > 15 then
                 return A.Recklessness:Show(icon)
             end
 
             --actions.multi_target+=/odyns_fury,if=active_enemies>1&talent.titanic_rage&(!buff.meat_cleaver.up|buff.avatar.up|buff.recklessness.up)
-            if A.OdynsFury:IsReady(player) and A.TitanicRage:IsTalentLearned() and (Unit(player):HasBuffs(A.MeatCleaver.ID) == 0 or Unit(player):HasBuffs(A.Avatar.ID) > 0 or Unit(player):HasBuffs(A.Recklessness.ID) > 0) then
+            if A.OdynsFury:IsReady(player) and Unit(unitID):GetRange() <= 10 and TTD > 10 and A.TitanicRage:IsTalentLearned() and (Unit(player):HasBuffs(A.MeatCleaverBuff.ID) == 0 or Unit(player):HasBuffs(A.Avatar.ID) > 0 or Unit(player):HasBuffs(A.Recklessness.ID) > 0) then
                 return A.OdynsFury:Show(icon)
             end
 
             --actions.multi_target+=/whirlwind,if=spell_targets.whirlwind>1&talent.improved_whirlwind&!buff.meat_cleaver.up|raid_event.adds.in<2&talent.improved_whirlwind&!buff.meat_cleaver.up
-            if A.Whirlwind:IsReady(player) and A.ImprovedWhirlwind:IsTalentLearned() and Unit(player):HasBuffs(A.MeatCleaver.ID) == 0 then
+            if A.Whirlwind:IsReady(player) and A.ImprovedWhirlwind:IsTalentLearned() and Unit(player):HasBuffs(A.MeatCleaverBuff.ID) == 0 then
                 return A.Whirlwind:Show(icon)
             end
 
@@ -346,12 +460,12 @@ A[3] = function(icon, isMulti)
             end
 
             --actions.multi_target+=/thunderous_roar,if=buff.enrage.up&(spell_targets.whirlwind>1|raid_event.adds.in>15)
-            if A.ThunderousRoar:IsReady(player) and BurstIsON(unitID) and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
+            if A.ThunderousRoar:IsReady(player) and Unit(unitID):GetRange() <= 10 and BurstIsON(unitID) and TTD > 15 and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
                 return A.ThunderousRoar:Show(icon)
             end
 
             --actions.multi_target+=/odyns_fury,if=active_enemies>1&buff.enrage.up&raid_event.adds.in>15
-            if A.OdynsFury:IsReady(player) and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
+            if A.OdynsFury:IsReady(player) and Unit(unitID):GetRange() <= 10 and Unit(player):HasBuffs(A.Enrage.ID) > 0 and TTD > 10 then
                 return A.OdynsFury:Show(icon)
             end
 
@@ -396,9 +510,17 @@ A[3] = function(icon, isMulti)
             end
             
             --actions.multi_target+=/crushing_blow,if=charges>1&talent.wrath_and_fury
-
+            if A.CrushingBlow:IsReady(unitID) and A.CrushingBlow:GetSpellCharges() > 1 and A.WrathandFury:IsTalentLearned() then
+                return A.CrushingBlow:Show(icon)
+            end
             --actions.multi_target+=/bloodbath,if=buff.enrage.down|!talent.wrath_and_fury
+            if A.Bloodbath:IsReady(unitID) and (Unit(player):HasBuffs(A.Enrage.ID) == 0 or not A.WrathandFury:IsTalentLearned()) then
+                return A.Bloodbath:Show(icon)
+            end
             --actions.multi_target+=/crushing_blow,if=buff.enrage.up&talent.reckless_abandon
+            if A.CrushingBlow:IsReady(unitID) and Unit(player):HasBuffs(A.Enrage.ID) > 0 and A.RecklessAbandon:IsTalentLearned() then
+                return A.CrushingBlow:Show(icon)
+            end
             --actions.multi_target+=/bloodthirst,if=!talent.wrath_and_fury
             if A.Bloodthirst:IsReady(unitID) and not A.WrathandFury:IsTalentLearned() then
                 return A.Bloodthirst:Show(icon)
@@ -420,10 +542,15 @@ A[3] = function(icon, isMulti)
             end
 
             --actions.multi_target+=/bloodbath
-
+            if A.Bloodbath:IsReady(unitID) then
+                return A.Bloodbath:Show(icon)
+            end
             --actions.multi_target+=/crushing_blow
+            if A.CrushingBlow:IsReady(unitID) then
+                return A.CrushingBlow:Show(icon)
+            end
             --actions.multi_target+=/whirlwind
-            if A.Whirlwind:IsReady(player) then
+            if A.Whirlwind:IsReady(player) and Unit(unitID):GetRange() <= 10 then
                 return A.Whirlwind:Show(icon)
             end
         end
@@ -436,14 +563,14 @@ A[3] = function(icon, isMulti)
             end
 
             --actions.single_target+=/thunderous_roar,if=buff.enrage.up&(spell_targets.whirlwind>1|raid_event.adds.in>15)
-            if A.ThunderousRoar:IsReady(player) and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
+            if A.ThunderousRoar:IsReady(player) and Unit(unitID):GetRange() <= 10 and BurstIsON(unitID) and TTD > 15 and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
                 return A.ThunderousRoar:Show(icon)
             end
 
-            --[[actions.single_target+=/crushing_blow,if=talent.wrath_and_fury&buff.enrage.up
+            --actions.single_target+=/crushing_blow,if=talent.wrath_and_fury&buff.enrage.up
             if A.CrushingBlow:IsReady(unitID) and A.WrathandFury:IsTalentLearned() and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
                 return A.CrushingBlow:Show(icon)
-            end]]
+            end
             
             --actions.single_target+=/execute,if=buff.enrage.up
             if A.Execute:IsReady(unitID) and Unit(player):HasBuffs(A.Enrage.ID) > 0 then
@@ -451,7 +578,7 @@ A[3] = function(icon, isMulti)
             end
 
             --actions.single_target+=/odyns_fury,if=buff.enrage.up&(spell_targets.whirlwind>1|raid_event.adds.in>15)&(talent.dancing_blades&buff.dancing_blades.remains<5|!talent.dancing_blades)
-            if A.OdynsFury:IsReady(player) and Unit(player):HasBuffs(A.Enrage.ID) > 0 and (Unit(player):HasBuffs(A.DancingBlades.ID) > 0 or not A.DancingBlades:IsTalentLearned()) then
+            if A.OdynsFury:IsReady(player) and Unit(unitID):GetRange() <= 10 and TTD > 10 and Unit(player):HasBuffs(A.Enrage.ID) > 0 and (Unit(player):HasBuffs(A.DancingBlades.ID) > 0 or not A.DancingBlades:IsTalentLearned()) then
                 return A.OdynsFury:Show(icon)
             end
 
@@ -481,8 +608,17 @@ A[3] = function(icon, isMulti)
             end
 
             --actions.single_target+=/raging_blow,if=charges>1&talent.wrath_and_fury
+            if A.RagingBlow:IsReady(unitID) and A.RagingBlow:GetSpellCharges() > 1 and A.WrathandFury:IsTalentLearned() then
+                return A.RagingBlow:Show(icon)
+            end
             --actions.single_target+=/crushing_blow,if=charges>1&talent.wrath_and_fury
+            if A.CrushingBlow:IsReady(unitID) and A.CrushingBlow:GetSpellCharges() > 1 and A.WrathandFury:IsTalentLearned() then
+                return A.CrushingBlow:Show(icon)
+            end
             --actions.single_target+=/bloodbath,if=buff.enrage.down|!talent.wrath_and_fury
+            if A.Bloodbath:IsReady(unitID) and (Unit(player):HasBuffs(A.Enrage.ID) == 0 or not A.WrathandFury:IsTalentLearned()) then
+                return A.Bloodbath:Show(icon)
+            end
             --actions.single_target+=/crushing_blow,if=buff.enrage.up&talent.reckless_abandon
             if A.Bloodthirst:IsReady(unitID) and not A.WrathandFury:IsTalentLearned() then
                 return A.Bloodthirst:Show(icon)
@@ -502,12 +638,16 @@ A[3] = function(icon, isMulti)
             if A.Slam:IsReady(unitID) and A.Annihilator:IsTalentLearned() then
                 return A.Slam:Show(icon)
             end
-
             --actions.multi_target+=/bloodbath
-
+            if A.Bloodbath:IsReady(unitID) then
+                return A.Bloodbath:Show(icon)
+            end
             --actions.multi_target+=/crushing_blow
+            if A.CrushingBlow:IsReady(unitID) then
+                return A.CrushingBlow:Show(icon)
+            end
             --actions.multi_target+=/whirlwind
-            if A.Whirlwind:IsReady(player) then
+            if A.Whirlwind:IsReady(player) and Unit(unitID):GetRange() <= 10 then
                 return A.Whirlwind:Show(icon)
             end
 
@@ -518,7 +658,7 @@ A[3] = function(icon, isMulti)
             
         end
     
-        if BurstIsON(unitID) then 
+        if BurstIsON(unitID) and InMelee() and TTD > 20 then 
             if BurstRotation(unitID) then
                 return true
             end
@@ -526,7 +666,7 @@ A[3] = function(icon, isMulti)
 
         if MultiUnits:GetByRange(10, 4) > 2 then
             return MultiTarget(unitID)  
-        else return SingleTarget(unitID)
+            else return SingleTarget(unitID)
         end
 
     end
