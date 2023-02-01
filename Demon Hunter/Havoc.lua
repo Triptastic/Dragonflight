@@ -403,8 +403,6 @@ A[3] = function(icon, isMulti)
             return A.Felblade:Show(icon)
         end
 
-        print(Player:PrevOffGCD(1, A.VengefulRetreat))
-
         -- Defensive
         local SelfDefensive = SelfDefensives()
         if SelfDefensive then 
