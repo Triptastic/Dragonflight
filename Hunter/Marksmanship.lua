@@ -141,12 +141,16 @@ Action[ACTION_CONST_HUNTER_MARKSMANSHIP] = {
     SerpentstalkersTrickery				= Action.Create({ Type = "Spell", ID = 378888, Hidden = true     }),
     Streamline				= Action.Create({ Type = "Spell", ID = 260367, Hidden = true     }),
     SurgingShots				= Action.Create({ Type = "Spell", ID = 391559, Hidden = true     }),
-    Salvo				= Action.Create({ Type = "Spell", ID = 384791, Hidden = true     }),
-    SalvoDebuff				= Action.Create({ Type = "Spell", ID = 388909, Hidden = true     }),
+    Salvo				= Action.Create({ Type = "Spell", ID = 400456, Hidden = true     }),
     Bombardment				= Action.Create({ Type = "Spell", ID = 386875, Hidden = true     }),
     PreciseShots				= Action.Create({ Type = "Spell", ID = 260242, Hidden = true     }),
     RazorFragments				= Action.Create({ Type = "Spell", ID = 388998, Hidden = true     }),
     Bulletstorm				= Action.Create({ Type = "Spell", ID = 389020, Hidden = true     }),
+    FortitudeoftheBear		= Action.Create({ Type = "SpellSingleColor", ID = 392956, Color = "PINK"   }),
+
+    ElementalPotion1    		= Action.Create({ Type = "Potion", ID = 191387, Texture = 176108, Hidden = true   }),
+    ElementalPotion2    		= Action.Create({ Type = "Potion", ID = 191388, Texture = 176108, Hidden = true   }),
+    ElementalPotion3    		= Action.Create({ Type = "Potion", ID = 191389, Texture = 176108, Hidden = true   }),
 }
 
 local A = setmetatable(Action[ACTION_CONST_HUNTER_MARKSMANSHIP], { __index = Action })
@@ -177,6 +181,44 @@ local Temp = {
 	TotalAndMagKick                         = {"TotalImun", "DamageMagicImun", "KickImun"},
     DisablePhys                             = {"TotalImun", "DamagePhysImun", "Freedom", "CCTotalImun"},
     DisableMag                              = {"TotalImun", "DamageMagicImun", "Freedom", "CCTotalImun"},
+    incomingAoEDamage                       = { 388537, --Arcane Fissue
+                                                377004, --Deafening Screech
+                                                388923, --Burst Forth
+                                                212784, --Eye Storm
+                                                192305, --Eye of the Storm (mini-boss)
+                                                200901, --Eye of the Storm (boss)
+                                                372863, --Ritual of Blazebinding
+                                                153094, --Whispers of the Dark Star
+                                                164974, --Dark Eclipse
+                                                153804, --Inhale
+                                                175988, --Omen of Death
+                                                106228, --Nothingness
+                                                374720, --Consuming Stomp
+                                                384132, --Overwhelming Energy
+                                                388008, --Absolute Zero
+                                                385399, --Unleashed Destruction
+                                                388817, --Shards of Stone
+                                                387145, --Totemic Overload
+    },
+    stopCasting                             = { 377004, --Deafening Screech
+                                                397892, --Scream of Pain
+                                                196543, --Unnerving Howl
+                                                199726, --Unruly Yell
+                                                381516, --Interrupting Cloudburst
+                                                384365, --Disruptive Shout
+    },
+    stunEnemy                               = { 197406, --Aggravated Skitterfly
+                                                104295, --Blazing Imp  
+                                                190174, --Hypnosis Bat  
+    },
+    scaryCasts                              = { 396023, --Incinerating Roar
+                                                376279, --Concussive Slam
+                                                388290, --Cyclone
+                                                375457, --Chilling Tantrum
+    },
+    scaryDebuffs                            = { 394917, --Leaping Flames
+                                                391686, --Conductive Mark
+    },
 }
 
 local function InMelee(unitID)
@@ -266,42 +308,17 @@ local function SelfDefensives()
     then
         return A.AspectoftheTurtle
     end   
-    
+
     -- AspectoftheTurtle
     local SurvivaloftheFittest = GetToggle(2, "SurvivaloftheFittest")
-    if     SurvivaloftheFittest >= 0 and A.SurvivaloftheFittest:IsReady(player) and 
-    (
-        (     -- Auto 
-        SurvivaloftheFittest >= 100 and 
-            (
-                -- HP lose per sec >= 30
-                Unit(player):GetDMG() * 100 / Unit(player):HealthMax() >= 30 or 
-                Unit(player):GetRealTimeDMG() >= Unit(player):HealthMax() * 0.30 or 
-                -- TTD 
-                Unit(player):TimeToDieX(25) < 5 or 
-                (
-                    A.IsInPvP and 
-                    (
-                        Unit(player):UseDeff() or 
-                        (
-                            Unit(player, 5):HasFlags() and 
-                            Unit(player):GetRealTimeDMG() > 0 and 
-                            Unit(player):IsFocused() 
-                        )
-                    )
-                )
-            ) and 
-            Unit(player):HasBuffs("DeffBuffs", true) == 0
-        ) or 
-        (    -- Custom
-        SurvivaloftheFittest < 100 and 
-            Unit(player):HealthPercent() <= SurvivaloftheFittest
-        )
-    ) 
-    then
+    if A.SurvivaloftheFittest:IsReady(player, nil, nil, true) and (Unit(player):HealthPercent() <= SurvivaloftheFittest or MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1) then
         return A.EveryManforHimself
-    end         
+    end     
 	
+    if A.FortitudeoftheBear:IsReady(player) and Unit(player):HealthPercent() <= 70 then
+        return A.FortitudeoftheBear
+    end
+
     -- Stoneform on self dispel (only PvE)
     if A.Stoneform:IsRacialReady(player, true) and not A.IsInPvP and A.AuraIsValid(player, "UseDispel", "Dispel") then 
         return A.Stoneform
@@ -408,20 +425,27 @@ A[3] = function(icon, isMulti)
     local ShouldStop = Action.ShouldStop()
     local useAoE = A.GetToggle(2, "AoE")
 
+    local MendPetHP = A.GetToggle(2, "MendPetHP")
+    if A.MendPet:IsReady(player) and Unit(pet):IsExists() and Unit(pet):HealthPercent() <= MendPetHP and Unit(pet):HealthPercent() > 0 and Unit(pet):HasBuffs(A.MendPet.ID, true) == 0 and Unit(pet):GetRange() < 40 and not A.LoneWolf:IsTalentLearned() then
+        return A.MendPet:Show(icon)
+    end 
+
+    if A.CallPet:IsReady(player) and not Unit(pet):IsExists() and not isMoving and not A.LoneWolf:IsTalentLearned() then
+        return A.CallPet:Show(icon)
+    end
+    
+    if A.RevivePet:IsReady(player) and Unit(pet):IsDead() and not isMoving and not A.LoneWolf:IsTalentLearned() then
+        return A.RevivePet:Show(icon)
+    end
+
     local function EnemyRotation(unitID)
         local useRacial = A.GetToggle(1, "Racial")
         --actions.precombat+=/summon_pet,if=talent.kill_command|talent.beast_master
-        local MendPetHP = A.GetToggle(2, "MendPetHP")
-        if A.MendPet:IsReady(player) and Unit(pet):IsExists() and Unit(pet):HealthPercent() <= MendPetHP and Unit(pet):HealthPercent() > 0 and Unit(pet):HasBuffs(A.MendPet.ID, true) == 0 and Unit(pet):GetRange() < 40 and not A.LoneWolf:IsTalentLearned() then
-            return A.MendPet:Show(icon)
-        end 
 
-        if A.CallPet:IsReady(player) and not Unit(pet):IsExists() and not isMoving and not A.LoneWolf:IsTalentLearned() then
-            return A.CallPet:Show(icon)
-        end
-        
-        if A.RevivePet:IsReady(player) and Unit(pet):IsDead() and not isMoving and not A.LoneWolf:IsTalentLearned() then
-            return A.RevivePet:Show(icon)
+        if Unit(unitID):IsExplosives() then
+            if A.SerpentSting:IsReady(unitID) then
+                return A.SerpentSting:Show(icon)
+            end
         end
 
         --actions.precombat+=/double_tap,precast_time=10
@@ -454,7 +478,7 @@ A[3] = function(icon, isMulti)
             return UseTrinket:Show(icon)
         end 
 
-        if BurstIsON(unitID) then
+        if BurstIsON(unitID) and A.SteadyShot:IsInRange(unitID) then
         --actions.cds+=/berserking,if=boss&fight_remains<13
             if A.Berserking:IsReady(player) and useRacial and (Unit(unitID):TimeToDie() > 13 or (Unit(unitID):IsBoss() and Unit(unitID):TimeToDie() < 13)) then
                 return A.Berserking:Show(icon)
@@ -476,6 +500,18 @@ A[3] = function(icon, isMulti)
                 return A.LightsJudgment:Show(icon)
             end
             --actions.cds+=/potion,if=buff.trueshot.up&(buff.bloodlust.up|target.health.pct<20)|boss&fight_remains<26
+            local damagePotion = A.GetToggle(2, "damagePotion")
+            local potionBossOnly = A.GetToggle(2, "potionBossOnly")
+            local damagePotionObject = A.DetermineUsableObject(player, nil, nil, true, nil, A.ElementalPotion1, A.ElementalPotion2, A.ElementalPotion3)
+            if damagePotionObject and damagePotion and ((potionBossOnly and Unit(unitID):IsBoss()) or not potionBossOnly) then
+                if Unit(player):HasBuffs(A.Trueshot.ID) > 0 then
+                    return damagePotionObject:Show(icon)
+                end
+            end
+            --actions.cds+=/salvo
+            if A.Salvo:IsReady(player) then
+                return A.DoubleTap:Show(icon)
+            end
 
             if A.Trueshot:IsReady(player) then
                 return A.Trueshot:Show(icon)
@@ -534,7 +570,7 @@ A[3] = function(icon, isMulti)
             --actions.st+=/trueshot,if=!raid_event.adds.exists&(!trinket.1.has_use_buff|trinket.1.cooldown.remains>30|trinket.1.cooldown.ready)&(!trinket.2.has_use_buff|trinket.2.cooldown.remains>30|trinket.2.cooldown.ready)|raid_event.adds.exists&(!raid_event.adds.up&(raid_event.adds.duration+raid_event.adds.in<25|raid_event.adds.in>60)|raid_event.adds.up&raid_event.adds.remains>10)|active_enemies>1|boss&fight_remains<25
             --# Trigger Trick Shots from Bombardment if it isn't already up, or trigger Salvo if Volley isn't being used to trigger it.
             --actions.st+=/multishot,if=buff.bombardment.up&buff.trick_shots.down&active_enemies>1|talent.salvo&buff.salvo.down&!talent.volley
-            if A.MultiShot:IsReady(unitID) and useAoE and ((Unit(player):HasBuffs(A.Bombardment.ID) > 0 and Unit(player):HasBuffs(A.TrickShotsBuff.ID) == 0 and MultiUnits:GetActiveEnemies() > 1) or (A.Salvo:IsTalentLearned() and Unit(player):HasDeBuffs(A.SalvoDebuff.ID) == 0 and not A.Volley:IsTalentLearned())) then
+            if A.MultiShot:IsReady(unitID) and useAoE and ((Unit(player):HasBuffs(A.Bombardment.ID) > 0 and Unit(player):HasBuffs(A.TrickShotsBuff.ID) == 0 and MultiUnits:GetActiveEnemies() > 1) or (Unit(player):HasBuffs(A.Salvo.ID) > 0 and not A.Volley:IsTalentLearned())) then
                 return A.MultiShot:Show(icon)
             end
             --# For Serpentstalker's Trickery, target the lowest remaining Serpent Sting. On one target don't overwrite Precise Shots unless Trueshot is up or Aimed Shot would cap otherwise, and on two targets don't overwrite Precise Shots if you have Chimaera Shot, but ignore those general rules if we can cleave it.
@@ -550,7 +586,7 @@ A[3] = function(icon, isMulti)
                 return A.SteadyShot:Show(icon)
             end
             --actions.st+=/rapid_fire
-            if A.RapidFire:IsReady(player) then
+            if A.RapidFire:IsReady(unitID) then
                 return A.RapidFire:Show(icon)
             end
             --actions.st+=/wailing_arrow,if=buff.trueshot.down
@@ -587,10 +623,6 @@ A[3] = function(icon, isMulti)
             --actions.trickshots+=/kill_shot,if=buff.razor_fragments.up
             if A.KillShot:IsReady(unitID) and Unit(player):HasBuffs(A.RazorFragments.ID) > 0 then
                 return A.KillShot:Show(icon)
-            end
-            --actions.trickshots+=/double_tap,if=cooldown.rapid_fire.remains<gcd|!talent.streamline
-            if A.DoubleTap:IsReady(player) and (A.RapidFire:GetCooldown() < A.GetGCD() or not A.Streamline:IsTalentLearned()) then
-                return A.DoubleTap:Show(icon)
             end
             --actions.trickshots+=/explosive_shot
             if A.ExplosiveShot:IsReady(unitID) then

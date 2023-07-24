@@ -371,13 +371,6 @@ local function SelfDefensives()
         unitID = "target"
     end  
 
-	if A.CanUseHealthstoneOrHealingPotion() then
-        if A.Soulburn:IsReady(player) then
-            return A.Soulburn
-        end
-		return A.Healthstone
-	end
-
     if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1 or Unit(player):HasDeBuffs(Temp.scaryDebuffs) > 0 and not defensiveActive then
         if A.DarkPact:IsReady(player) and Unit(player):HealthPercent() >= 50 then
             return A.DarkPact

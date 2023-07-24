@@ -136,6 +136,7 @@ Action[ACTION_CONST_HUNTER_BEASTMASTERY] = {
     WailingArrow		    = Action.Create({ Type = "Spell", ID = 392060   }),
     CalloftheWild			= Action.Create({ Type = "Spell", ID = 359844   }),
     CobraShot				= Action.Create({ Type = "Spell", ID = 193455   }),
+    FortitudeoftheBear		= Action.Create({ Type = "SpellSingleColor", ID = 272679, Color = "PINK"   }),
     Frenzy      			= Action.Create({ Type = "Spell", ID = 272790, Hidden = true   }),
     ScentofBlood     		= Action.Create({ Type = "Spell", ID = 193532, Hidden = true   }),
     AlphaPredator      		= Action.Create({ Type = "Spell", ID = 269737, Hidden = true   }),
@@ -177,6 +178,44 @@ local Temp = {
 	TotalAndMagKick                         = {"TotalImun", "DamageMagicImun", "KickImun"},
     DisablePhys                             = {"TotalImun", "DamagePhysImun", "Freedom", "CCTotalImun"},
     DisableMag                              = {"TotalImun", "DamageMagicImun", "Freedom", "CCTotalImun"},
+    incomingAoEDamage                       = { 388537, --Arcane Fissue
+                                                377004, --Deafening Screech
+                                                388923, --Burst Forth
+                                                212784, --Eye Storm
+                                                192305, --Eye of the Storm (mini-boss)
+                                                200901, --Eye of the Storm (boss)
+                                                372863, --Ritual of Blazebinding
+                                                153094, --Whispers of the Dark Star
+                                                164974, --Dark Eclipse
+                                                153804, --Inhale
+                                                175988, --Omen of Death
+                                                106228, --Nothingness
+                                                374720, --Consuming Stomp
+                                                384132, --Overwhelming Energy
+                                                388008, --Absolute Zero
+                                                385399, --Unleashed Destruction
+                                                388817, --Shards of Stone
+                                                387145, --Totemic Overload
+    },
+    stopCasting                             = { 377004, --Deafening Screech
+                                                397892, --Scream of Pain
+                                                196543, --Unnerving Howl
+                                                199726, --Unruly Yell
+                                                381516, --Interrupting Cloudburst
+                                                384365, --Disruptive Shout
+    },
+    stunEnemy                               = { 197406, --Aggravated Skitterfly
+                                                104295, --Blazing Imp  
+                                                190174, --Hypnosis Bat  
+    },
+    scaryCasts                              = { 396023, --Incinerating Roar
+                                                376279, --Concussive Slam
+                                                388290, --Cyclone
+                                                375457, --Chilling Tantrum
+    },
+    scaryDebuffs                            = { 394917, --Leaping Flames
+                                                391686, --Conductive Mark
+    },
 }
 
 local function InMelee(unitID)
@@ -267,41 +306,15 @@ local function SelfDefensives()
         return A.AspectoftheTurtle
     end   
     
-    -- AspectoftheTurtle
     local SurvivaloftheFittest = GetToggle(2, "SurvivaloftheFittest")
-    if     SurvivaloftheFittest >= 0 and A.SurvivaloftheFittest:IsReady(player) and 
-    (
-        (     -- Auto 
-        SurvivaloftheFittest >= 100 and 
-            (
-                -- HP lose per sec >= 30
-                Unit(player):GetDMG() * 100 / Unit(player):HealthMax() >= 30 or 
-                Unit(player):GetRealTimeDMG() >= Unit(player):HealthMax() * 0.30 or 
-                -- TTD 
-                Unit(player):TimeToDieX(25) < 5 or 
-                (
-                    A.IsInPvP and 
-                    (
-                        Unit(player):UseDeff() or 
-                        (
-                            Unit(player, 5):HasFlags() and 
-                            Unit(player):GetRealTimeDMG() > 0 and 
-                            Unit(player):IsFocused() 
-                        )
-                    )
-                )
-            ) and 
-            Unit(player):HasBuffs("DeffBuffs", true) == 0
-        ) or 
-        (    -- Custom
-        SurvivaloftheFittest < 100 and 
-            Unit(player):HealthPercent() <= SurvivaloftheFittest
-        )
-    ) 
-    then
+    if A.SurvivaloftheFittest:IsReady(player, nil, nil, true) and (Unit(player):HealthPercent() <= SurvivaloftheFittest or MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1) then
         return A.EveryManforHimself
-    end         
+    end   
 	
+    if A.FortitudeoftheBear:IsReady(player) and Unit(player):HealthPercent() <= 70 then
+        return A.FortitudeoftheBear
+    end
+
     -- Stoneform on self dispel (only PvE)
     if A.Stoneform:IsRacialReady(player, true) and not A.IsInPvP and A.AuraIsValid(player, "UseDispel", "Dispel") then 
         return A.Stoneform
@@ -400,13 +413,19 @@ end
 local function ActiveEnemies()
 
     local spells = {17253, 16827, 49966}
+    local activeEnemies
 
-    for _, spell in pairs(spells) do
-        if Pet:IsSpellKnown(spell) then
-            return Pet:GetInRange(spell)
+    if not Pet:IsActive() then
+        activeEnemies = 0
+    else 
+        for _, spell in pairs(spells) do
+            if Pet:IsSpellKnown(spell) then
+                activeEnemies = Pet:GetInRange(spell)
+            end
         end
     end
-    return 
+
+    return activeEnemies
 
 end
 
@@ -421,22 +440,32 @@ A[3] = function(icon, isMulti)
     local useAoE = A.GetToggle(2, "AoE") 
     local activeEnemies = ActiveEnemies()
 
+    local MendPetHP = A.GetToggle(2, "MendPetHP")
+    if A.MendPet:IsReady(player) and Unit(pet):IsExists() and Unit(pet):HealthPercent() <= MendPetHP and Unit(pet):HealthPercent() > 0 and Unit(pet):HasBuffs(A.MendPet.ID, true) == 0 and Unit(pet):GetRange() < 40 then
+        return A.MendPet:Show(icon)
+    end 
+
+    if A.CallPet:IsReady(player) and not Unit(pet):IsExists() then
+        return A.CallPet:Show(icon)
+    end
+    
+    if A.RevivePet:IsReady(player) and Unit(pet):IsDead() and not isMoving then
+        return A.RevivePet:Show(icon)
+    end
+
     local function EnemyRotation(unitID)
+
+        if Unit(unitID):IsExplosives() then
+            if A.CobraShot:IsReady(unitID) then
+                return A.CobraShot:Show(icon)
+            end
+            if A.KillCommand:IsReady(unitID) then
+                return A.KillCommand:Show(icon)
+            end
+        end
+
         local useRacial = A.GetToggle(1, "Racial")
         --actions.precombat+=/summon_pet,if=talent.kill_command|talent.beast_master
-        local MendPetHP = A.GetToggle(2, "MendPetHP")
-        if A.MendPet:IsReady(player) and Unit(pet):IsExists() and Unit(pet):HealthPercent() <= MendPetHP and Unit(pet):HealthPercent() > 0 and Unit(pet):HasBuffs(A.MendPet.ID, true) == 0 and Unit(pet):GetRange() < 40 then
-            return A.MendPet:Show(icon)
-        end 
-
-        if A.CallPet:IsReady(player) and not Unit(pet):IsExists() and not isMoving then
-            return A.CallPet:Show(icon)
-        end
-        
-        if A.RevivePet:IsReady(player) and Unit(pet):IsDead() and not isMoving then
-            return A.RevivePet:Show(icon)
-        end
-
         
         if A.Misdirection:IsReady(player) and ((Unit(focus):IsExists() and IsUnitFriendly(focus)) or Unit(pet):IsExists()) then
             return A.Misdirection:Show(icon)
@@ -455,7 +484,7 @@ A[3] = function(icon, isMulti)
         end    
 
 
-        if BurstIsON(unitID) and useRacial and (Unit(unitID):TimeToDie() < 16 and Unit(unitID):IsBoss() or Unit(unitID):TimeToDie() > 16) then
+        if BurstIsON(unitID) and useRacial and (Unit(unitID):TimeToDie() < 16 and Unit(unitID):IsBoss() or Unit(unitID):TimeToDie() > 16) and A.BarbedShot:IsInRange(unitID) then
 
             -- actions.cds+=/berserking,if=!talent.bestial_wrath|buff.bestial_wrath.up|fight_remains<16
             if A.Berserking:IsReady(player) then
@@ -524,7 +553,7 @@ A[3] = function(icon, isMulti)
                 return A.ExplosiveShot:Show(icon)
             end
             -- actions.st+=/bestial_wrath
-            if A.BestialWrath:IsReady(player) and BurstIsON(unitID) and (Unit(unitID):TimeToDie() < 16 and Unit(unitID):IsBoss() or Unit(unitID):TimeToDie() > 16) then
+            if A.BestialWrath:IsReady(player) and BurstIsON(unitID) and (Unit(unitID):TimeToDie() < 16 and Unit(unitID):IsBoss() or Unit(unitID):TimeToDie() > 16) and A.BarbedShot:IsInRange(unitID) then
                 return A.BestialWrath:Show(icon)
             end
             -- actions.st+=/kill_command
@@ -550,7 +579,7 @@ A[3] = function(icon, isMulti)
                 return A.KillShot:Show(icon)
             end
             -- actions.st+=/aspect_of_the_wild
-            if A.AspectoftheWild:IsReady(player) then
+            if A.AspectoftheWild:IsReady(unitID) then
                 return A.AspectoftheWild:Show(icon)
             end
             -- actions.st+=/cobra_shot
@@ -654,7 +683,7 @@ A[3] = function(icon, isMulti)
                 return A.KillShot:Show(icon)
             end
             -- actions.cleave+=/aspect_of_the_wild
-            if A.AspectoftheWild:IsReady(player) then
+            if A.AspectoftheWild:IsReady(unitID) then
                 return A.AspectoftheWild:Show(icon)
             end
             -- actions.cleave+=/cobra_shot,if=focus.time_to_max<gcd*2|buff.aspect_of_the_wild.up&focus.time_to_max<gcd*4

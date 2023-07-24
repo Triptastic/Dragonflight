@@ -267,19 +267,6 @@ local function SelfDefensives()
         unitID = "target"
     end  
 
-	local Healthstone = A.GetToggle(2, "HealthstoneHP") 
-	if Healthstone >= 0 then 
-		if A.Healthstone:IsReadyByPassCastGCD(player) then 					
-			if Healthstone >= 100 then -- AUTO 
-				if Unit(player):TimeToDie() <= 9 and Unit(player):HealthPercent() <= 40 then 
-					return A.Healthstone
-				end 
-			elseif Unit(player):HealthPercent() <= Healthstone then 
-				return A.Healthstone							 
-			end
-		end
-	end
-
 	if A.SpiritoftheRedeemer:IsReady(player) and A.SpiritoftheRedeemer:IsTalentLearned() and Unit(player):HealthPercent() <= 20 and Unit(player):HasBuffs(A.DivineAscensionBuff.ID) == 0 then
 		return A.SpiritoftheRedeemer
 	end
@@ -717,15 +704,13 @@ A[3] = function(icon, isMulti)
 			return A.ShadowWordPain:Show(icon)
 		end
 
-		if A.HolyWordChastise:IsReady(unitID) and not A.Censure:IsTalentLearned() then
-			if A.DivineWord:IsReady(player) then
-				return A.DivineWord:Show(icon)
-			end
+		local saveChastise = A.GetToggle(2, "saveChastise")
+		if A.HolyWordChastise:IsReady(unitID) and (not A.Censure:IsTalentLearned() or not saveChastise) then
 			return A.HolyWordChastise:Show(icon)
 		end
 
 		if A.EmpyrealBlaze:IsReady(player) and A.HolyFire:GetCooldown() > 5 then
-			return A.EmpyrealBlaze:Show(icon)
+			return A.ArcanePulse:Show(icon)
 		end
 
 		if A.HolyFire:IsReady(unitID) and (not isMoving or Unit(player):HasBuffs(A.EmpyrealBlazeBuff.ID) > 0) then

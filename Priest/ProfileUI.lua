@@ -66,23 +66,6 @@ A.Data.ProfileUI = {
                     },
                 },
             },
-            {
-                { -- HealthstoneHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "HealthstoneHP",
-                    DBV = 20,
-                    ONOFF = true,
-                    L = { 
-                        ANY = "Healthstone HP (%)",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Healthstone.", 
-                    },                     
-                    M = {},
-                },	
-            },	
 			{
                 { -- DispersionHP
                     E = "Slider",                                                     
@@ -278,6 +261,21 @@ A.Data.ProfileUI = {
                         Print = '@string' or nil,
                     },
                 },
+                { -- HealthstoneHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "ManaPotion",
+                    DBV = 20,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Mana Potion MP (%)",
+                    },
+                    TT = { 
+                        ANY = "MP (%) to use Mana Potion.", 
+                    },                     
+                    M = {},
+                },	
 			},
             { -- LAYOUT SPACE   
                 {
@@ -292,22 +290,7 @@ A.Data.ProfileUI = {
                     },
                 },
             },	
-            {
-                { -- HealthstoneHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "HealthstoneHP",
-                    DBV = 20,
-                    ONOFF = true,
-                    L = { 
-                        ANY = "Healthstone HP (%)",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Healthstone.", 
-                    },                     
-                    M = {},
-                },	
+            {	
                 { -- DesperatePrayerHP
                     E = "Slider",                                                     
                     MIN = 0, 
@@ -475,7 +458,24 @@ A.Data.ProfileUI = {
                         ANY = "Multiplies the healing calculations by this amount (if healing sliders are set to AUTO). A lower number means that your heals will be cast sooner. Not recommended to have this higher than 1. Default is 0.8.", 
                     },                     
                     M = {},
-                },	
+                },
+                { -- Global Heal Modifier
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100, 
+                    DB = "atonementSensitivity",
+                    DBV = 35,
+                    ONOFF = false,
+                    L = { 
+                        ANY = "Atonement Sensitivity",
+                    },
+                    TT = { 
+                        ANY = "The % HP outlier required to switch to a direct heal spell versus using atonement healing. The higher the number, the more you rely on atonement for healing and less on direct healing. Recommended somewhere around 35.", 
+                    },                     
+                    M = {},
+                },		
+            },
+            {
                 { -- PainSuppressionHP
                     E = "Slider",                                                     
                     MIN = 0, 
@@ -491,8 +491,6 @@ A.Data.ProfileUI = {
                     },                     
                     M = {},
                 },						
-            },
-			{
                 { -- PenanceHP
                     E = "Slider",                                                     
                     MIN = 0, 
@@ -663,6 +661,21 @@ A.Data.ProfileUI = {
                         Print = '@string' or nil,
                     },
                 },
+                { -- HealthstoneHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "ManaPotion",
+                    DBV = 20,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Mana Potion MP (%)",
+                    },
+                    TT = { 
+                        ANY = "MP (%) to use Mana Potion.", 
+                    },                     
+                    M = {},
+                },	
 			},
             { -- LAYOUT SPACE   
                 {
@@ -678,21 +691,6 @@ A.Data.ProfileUI = {
                 },
             },
             {
-                { -- HealthstoneHP
-                    E = "Slider",                                                     
-                    MIN = 0, 
-                    MAX = 100,                            
-                    DB = "HealthstoneHP",
-                    DBV = 20,
-                    ONOFF = true,
-                    L = { 
-                        ANY = "Healthstone HP (%)",
-                    },
-                    TT = { 
-                        ANY = "HP (%) to use Healthstone.", 
-                    },                     
-                    M = {},
-                },	
                 { -- DesperatePrayerHP
                     E = "Slider",                                                     
                     MIN = 0, 
@@ -823,13 +821,27 @@ A.Data.ProfileUI = {
                     DB = "alwaysPoM",
                     DBV = true,
                     L = { 
-                        ANY = "alwaysPoM",
+                        ANY = "Use PoM on cooldown",
                     }, 
                     TT = { 
                         ANY = "Keep Prayer of Mending on cooldown (turn this off if you want to only use it when there are no stacks of PoM on any party member).",
                     }, 
                     M = {},
                 },
+            },
+            {
+                { -- saveChastise
+                    E = "Checkbox", 
+                    DB = "saveChastise",
+                    DBV = true,
+                    L = { 
+                        ANY = "Only Chastise for stun",
+                    }, 
+                    TT = { 
+                        ANY = "Only use Chastise for stun, not for added DPS.",
+                    }, 
+                    M = {},
+                }
 			},
             { -- LAYOUT SPACE   
                 {
