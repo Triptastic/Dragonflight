@@ -142,6 +142,7 @@ Action[ACTION_CONST_HUNTER_BEASTMASTERY] = {
     AlphaPredator      		= Action.Create({ Type = "Spell", ID = 269737, Hidden = true   }),
     WildInstincts      		= Action.Create({ Type = "Spell", ID = 378442, Hidden = true   }),
     WildCall          		= Action.Create({ Type = "Spell", ID = 185789, Hidden = true   }),
+    KillCleave         		= Action.Create({ Type = "Spell", ID = 378207, Hidden = true   }),  
 }
 
 local A = setmetatable(Action[ACTION_CONST_HUNTER_BEASTMASTERY], { __index = Action })
@@ -486,9 +487,9 @@ A[3] = function(icon, isMulti)
 
         if BurstIsON(unitID) and useRacial and (Unit(unitID):TimeToDie() < 16 and Unit(unitID):IsBoss() or Unit(unitID):TimeToDie() > 16) and A.BarbedShot:IsInRange(unitID) then
 
-            -- actions.cds+=/berserking,if=!talent.bestial_wrath|buff.bestial_wrath.up|fight_remains<16
+            -- actions.cds+=/berserking,if=buff.call_of_the_wild.up|!talent.call_of_the_wild&buff.bestial_wrath.up|fight_remains<13
             if A.Berserking:IsReady(player) then
-                if Unit(player):HasBuffs(A.BestialWrath.ID) > 0 or not A.BestialWrath:IsTalentLearned() then
+                if Unit(player):HasBuffs(A.CalloftheWild.ID) > 0 or (not A.CalloftheWild:IsTalentLearned() and Unit(player):HasBuffs(A.BestialWrath.ID) > 0) then
                     return A.Berserking:Show(icon)
                 end
             end
@@ -619,8 +620,12 @@ A[3] = function(icon, isMulti)
             if A.MultiShot:IsReady(unitID) and (A.GetGCD() - Unit(player):HasBuffs(A.BeastCleaveBuff.ID)) > 0.25 then
                 return A.MultiShot:Show(icon)
             end
-            -- actions.cleave+=/kill_command,if=full_recharge_time<gcd&talent.alpha_predator&talent.kill_cleave
-            if A.KillCommand:IsReady(unitID) and A.KillCommand:GetSpellChargesFullRechargeTime() < A.GetGCD() and A.AlphaPredator:IsTalentLearned() then
+            -- actions.cleave+=/bestial_wrath
+            if A.BestialWrath:IsReady(player) and BurstIsON(unitID) and (Unit(unitID):TimeToDie() < 16 and Unit(unitID):IsBoss() or Unit(unitID):TimeToDie() > 16) and A.BarbedShot:IsInRange(unitID) then
+                return A.BestialWrath:Show(icon)
+            end            
+            -- actions.cleave+=/kill_command,if=talent.kill_cleave
+            if A.KillCommand:IsReady(unitID) and A.KillCleave:IsTalentLearned() then
                 return A.KillCommand:Show(icon)
             end
             -- actions.cleave+=/call_of_the_wild
@@ -642,10 +647,6 @@ A[3] = function(icon, isMulti)
             -- actions.cleave+=/death_chakram
             if A.DeathChakram:IsReady(unitID) then
                 return A.DeathChakram:Show(icon)
-            end
-            -- actions.cleave+=/bestial_wrath
-            if A.BestialWrath:IsReady(player) and BurstIsON(unitID) and (Unit(unitID):TimeToDie() < 16 and Unit(unitID):IsBoss() or Unit(unitID):TimeToDie() > 16) then
-                return A.BestialWrath:Show(icon)
             end
             -- actions.cleave+=/steel_trap
             if A.SteelTrap:IsReady(player) then
@@ -678,10 +679,10 @@ A[3] = function(icon, isMulti)
             if A.Barrage:IsReady(player) and Unit(pet):HasBuffs(A.Frenzy.ID) > A.Barrage:GetSpellCastTime() then
                 return A.Barrage:Show(icon)
             end
-            -- actions.cleave+=/kill_shot
-            if A.KillShot:IsReady(unitID) then
-                return A.KillShot:Show(icon)
-            end
+            --actions.cleave+=/multishot,if=pet.main.buff.beast_cleave.remains<gcd*2     
+            if A.MultiShot:IsReady(unitID) and Unit(pet):HasBuffs(A.BeastCleaveBuff.ID) < A.GetGCD() * 2 then
+                return A.MultiShot:Show(icon)
+            end       
             -- actions.cleave+=/aspect_of_the_wild
             if A.AspectoftheWild:IsReady(unitID) then
                 return A.AspectoftheWild:Show(icon)
@@ -705,6 +706,10 @@ A[3] = function(icon, isMulti)
             -- actions.cleave+=/arcane_torrent,if=(focus+focus.regen+30)<focus.max
             if A.ArcaneTorrent:IsReady(player) and useRacial and (Player:Focus() + Player:FocusRegen() + 15) < Player:FocusMax() then
                 return A.ArcaneTorrent:Show(icon)
+            end
+            -- actions.cleave+=/kill_shot
+            if A.KillShot:IsReady(unitID) then
+                return A.KillShot:Show(icon)
             end
         end
 

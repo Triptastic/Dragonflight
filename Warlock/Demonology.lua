@@ -148,6 +148,7 @@ Action[ACTION_CONST_WARLOCK_DEMONOLOGY] = {
     SoulFlame      = Action.Create({ Type = "Spell", ID = 199471 }),
     HarvesterofSouls= Action.Create({ Type = "Spell", ID = 201424 }),
     DemonicCalling = Action.Create({ Type = "Spell", ID = 205145 }),
+    DemonicCallingBuff = Action.Create({ Type = "Spell", ID = 205146 }),
     ReverseEntropy = Action.Create({ Type = "Spell", ID = 205148 }),
     PhantomSingularity= Action.Create({ Type = "Spell", ID = 205179 }),
     SummonDarkglare= Action.Create({ Type = "Spell", ID = 205180 }),
@@ -310,10 +311,11 @@ local player = "player"
 local target = "target"
 local pet = "pet"
 
-Pet:AddActionsSpells(267, {
+Pet:AddActionsSpells(266, {
 	A.LashofPain.ID,
 	A.Whiplash.ID,
 	A.ShadowBite.ID, 
+    A.LegionStrike.ID,
 }, true)
 
 ------------------------------------------
@@ -527,35 +529,17 @@ end
 
 local function ActiveEnemies()
 
-    local spells = {A.ShadowBite.ID, A.Whiplash.ID}
+    local spells = {A.ShadowBite.ID, A.Whiplash.ID, A.LegionStrike.ID}
     local aoeDetection = A.GetToggle(2, "aoeDetection")
 
     for _, spell in pairs(spells) do
         if Pet:IsSpellKnown(spell) and aoeDetection == "Pet" then
             return Pet:GetInRange(spell)
-            else return MultiUnits:GetActiveEnemies()
         end
     end
 
 end
 
-local function HavocTimer()
-
-    local timer = 0
-    local activeUnitPlates = MultiUnits:GetActiveUnitPlates()
-	for namePlateUnitID in pairs(activeUnitPlates) do 
-		if Unit(namePlateUnitID):HasDeBuffs(A.Havoc.ID, true) > 0 then
-            timer = Unit(namePlateUnitID):HasDeBuffs(A.Havoc.ID, true)
-        end
-	end  
-
-    return timer
-end
-
-local dontHavoc = {
-    [59051] = true, -- Strife
-    [59726] = true, -- Peril
-}   
 
 --- ======= ACTION LISTS =======
 -- [3] Single Rotation
@@ -570,10 +554,11 @@ A[3] = function(icon, isMulti)
     local activeEnemies = ActiveEnemies()
     local useRacial = A.GetToggle(1, "Racial")
     local soulShards = Player:SoulShards()
-    local havocRemains = HavocTimer()
     local TTD = MultiUnits.GetByRangeAreaTTD(40)
     local summonDemonicTyrantExpected = A.SummonDemonicTyrant:GetCooldown()
     local totemName = select(2, Player:GetTotemInfo(1))
+
+
 
     Player:AddTier("Tier29", { 200327, 200326, 200328, 200324, 200329, })
     local T29has2P = Player:HasTier("Tier29", 2)
@@ -596,252 +581,111 @@ A[3] = function(icon, isMulti)
     end
 
     local function EnemyRotation(unitID)
+        local useBurst = A.BurstIsON(unitID)
+        if Unit(player):IsCastingRemains() < 0.5 then
 
-        local inRange = A.ShadowBolt:IsInRange(unitID)
+            local inRange = A.ShadowBolt:IsInRange(unitID)
 
-        -- Defensive
-        local SelfDefensive = SelfDefensives()
-        if SelfDefensive then 
-            return SelfDefensive:Show(icon)
-        end 
+            -- Defensive
+            local SelfDefensive = SelfDefensives()
+            if SelfDefensive then 
+                return SelfDefensive:Show(icon)
+            end 
 
-        -- Interrupts
-        local Interrupt = Interrupts(unitID)
-        if Interrupt then 
-            return Interrupt:Show(icon)
-        end
+            -- Interrupts
+            local Interrupt = Interrupts(unitID)
+            if Interrupt then 
+                return Interrupt:Show(icon)
+            end
 
-		local DoPurge = Purge(unitID)
-		if DoPurge then 
-			return DoPurge:Show(icon)
-		end	
+            local DoPurge = Purge(unitID)
+            if DoPurge then 
+                return DoPurge:Show(icon)
+            end	
 
-        if Unit(unitID):IsExplosives() then
-            if A.DrainLife:IsReady(unitID) then
-                return A.DrainLife:Show(icon)
-            end
-        end
-
-        -- actions.precombat+=/inquisitors_gaze
-        if A.InquisitorsGaze:IsReady(player) and Unit(player):HasBuffs(A.InquisitorsGazeBuff.ID) == 0 then
-            return A.InquisitorsGaze:Show(icon)
-        end
-
-        if not inCombat then
-            -- actions.precombat+=/variable,name=tyrant_prep_start,op=set,value=12
-            tyrantPrepStart = 12
-            -- actions.precombat+=/variable,name=next_tyrant,op=set,value=14+talent.grimoire_felguard+talent.summon_vilefiend
-            nextTyrant = 14 + num(A.GrimoireFelguard:IsTalentLearned()) + num(A.SummonVilefiend:IsTalentLearned())
-            -- actions.precombat+=/power_siphon
-            if A.PowerSiphon:IsReady(player) then
-                return A.PowerSiphon:Show(icon)
-            end
-            -- actions.precombat+=/demonbolt,if=!buff.power_siphon.up
-            if A.Demonbolt:IsReady(unitID) and Unit(player):HasBuffs(A.DemonicCore.ID) == 0 then
-                return A.Demonbolt:Show(icon)
-            end
-            -- actions.precombat+=/shadow_bolt
-            if A.ShadowBolt:IsReady(unitID) and not isMoving then
-                return A.ShadowBolt:Show(icon)
-            end
-        end
-
-        local function Tyrant()
-            -- actions.tyrant=variable,name=next_tyrant,op=set,value=time+14+cooldown.grimoire_felguard.ready+cooldown.summon_vilefiend.ready,if=variable.next_tyrant<=time
-            if nextTyrant <= combatTime then
-                nextTyrant = combatTime + 14 + num(A.SummonVilefiend:IsReadyByPassCastGCD(player)) + num(A.GrimoireFelguard:IsReadyByPassCastGCD(unitID))
-            end
-            -- actions.tyrant+=/shadow_bolt,if=time<2&soul_shard<5
-            if A.ShadowBolt:IsReady(unitID) and not isMoving and combatTime < 2 and soulShards < 5 then
-                return A.ShadowBolt
-            end
-            -- actions.tyrant+=/nether_portal
-            if A.NetherPortal:IsReady(player) and not isMoving then
-                return A.NetherPortal
-            end
-            -- actions.tyrant+=/grimoire_felguard
-            if A.GrimoireFelguard:IsReady(unitID) then
-                return A.GrimoireFelguard
-            end
-            -- actions.tyrant+=/summon_vilefiend
-            if A.SummonVilefiend:IsReady(player) and not isMoving then
-                return A.SummonVilefiend
-            end
-            -- actions.tyrant+=/call_dreadstalkers
-            if A.CallDreadstalkers:IsReady(unitID) and not isMoving then
-                return A.CallDreadstalkers
-            end
-            -- actions.tyrant+=/soulburn,if=buff.nether_portal.up&soul_shard>=2,line_cd=40
-            local function soulburn()
-                if A.Soulburn:IsReady(unitID) and Unit(player):HasBuffs(A.NetherPortalBuff.ID) > 0 and soulShards >= 2 then
-                    return A.Soulburn
-                end
-                C_Timer.After(40, soulburn)
-            end
-            soulburn()
-            -- actions.tyrant+=/hand_of_guldan,if=variable.next_tyrant-time>2&(buff.nether_portal.up|soul_shard>2&variable.next_tyrant-time<12|soul_shard=5)
-            if A.HandofGuldan:IsReady(unitID) then
-                if nextTyrant - combatTime > 2 and (Unit(player):HasBuffs(A.NetherPortalBuff.ID) > 0 or soulShards > 2 and nextTyrant - combatTime < 12 or soulShards == 5) then
-                    return A.HandofGuldan
+            if Unit(unitID):IsExplosives() then
+                if A.DrainLife:IsReady(unitID) then
+                    return A.DrainLife:Show(icon)
                 end
             end
-            -- actions.tyrant+=/hand_of_guldan,if=talent.soulbound_tyrant&variable.next_tyrant-time<4&variable.next_tyrant-time>action.summon_demonic_tyrant.cast_time
-            if A.HandofGuldan:IsReady(unitID) and not isMoving and A.SoulboundTyrant:IsTalentLearned() and nextTyrant - combatTime < 4 and nextTyrant - combatTime > A.SummonDemonicTyrant:GetSpellCastTime() then
-                return A.HandofGuldan
-            end
-            -- actions.tyrant+=/summon_demonic_tyrant,if=variable.next_tyrant-time<cast_time*2
-            if A.SummonDemonicTyrant:IsReady(player) and not isMoving and nextTyrant - combatTime < A.SummonDemonicTyrant:GetSpellCastTime() * 2 then
-                return A.SummonDemonicTyrant
-            end
-            -- actions.tyrant+=/demonbolt,if=buff.demonic_core.up
-            if A.Demonbolt:IsReady(unitID) and Unit(player):HasBuffs(A.DemonicCore.ID) > 0 then
-                return A.Demonbolt
-            end
-            -- actions.tyrant+=/power_siphon,if=buff.wild_imps.stack>1&!buff.nether_portal.up
-            if A.PowerSiphon:IsReady(player) and Unit(player):HasBuffs(A.NetherPortalBuff.ID) == 0 then
-                return A.PowerSiphon
-            end
-            -- actions.tyrant+=/soul_strike
-            if A.SoulStrike:IsReady(player) and Unit(pet):IsExists() and not Unit(pet):IsDead() then
-                return A.SoulStrike
-            end
-            -- actions.tyrant+=/shadow_bolt
-            if A.ShadowBolt:IsReady(unitID) and not isMoving then
-                return A.ShadowBolt
-            end
-        end
 
-        local useTyrant = Tyrant()
-        -- # Executed every time the actor is available.
-        -- actions=call_action_list,name=tyrant,if=talent.summon_demonic_tyrant&(time-variable.next_tyrant)<=(variable.tyrant_prep_start+2)&cooldown.summon_demonic_tyrant.up
-        if inRange then
-            if A.SummonDemonicTyrant:IsTalentLearned() and (combatTime - nextTyrant) <= (tyrantPrepStart + 2) and A.SummonDemonicTyrant:GetCooldown() == 0 then
-                if useTyrant then
-                    return useTyrant:Show(icon)
+            if not inCombat then
+                if A.PowerSiphon:IsReady(player, nil, nil, true) then
+                    return A.PowerSiphon:Show(icon)
+                end
+                if A.Demonbolt:IsReady(unitID, nil, nil, true) and Unit(player):HasBuffs(A.DemonicCore.ID) > 0 then
+                    return A.Demonbolt:Show(icon)
+                end
+                if A.ShadowBolt:IsReady(unitID, nil, nil, true) and Unit(player):HasBuffs(A.DemonicCore.ID) == 0 then
+                    return A.ShadowBolt:Show(icon)
                 end
             end
-            -- actions+=/call_action_list,name=tyrant,if=talent.summon_demonic_tyrant&cooldown.summon_demonic_tyrant.remains_expected<=variable.tyrant_prep_start
-            if A.SummonDemonicTyrant:IsTalentLearned() and BurstIsON(unitID) and summonDemonicTyrantExpected <= tyrantPrepStart then
-                if useTyrant then
-                    return useTyrant:Show(icon)
+          
+            if activeEnemies >=3 then
+                if A.Guillotine:IsReady(player, nil, nil, true) then
+                    return A.Guillotine:Show(icon)
+                end
+                if A.BilescourgeBombers:IsReady(player, nil, nil, true) then
+                    return A.BilescourgeBombers:Show(icon)
+                end
+                if A.DemonicStrength:IsReady(player, nil, nil, true) then
+                    return A.DemonicStrength:Show(icon)
+                end
+                if A.GrimoireFelguard:IsReady(player, nil, nil, true) then
+                    return A.GrimoireFelguard:Show(icon)
+                end
+                if A.Felstorm:IsReady(player, nil, nil, true) then
+                    return A.Felstorm:Show(icon)
+                end
+                if A.CallDreadstalkers:IsReady(unitID, nil, nil, true) and (not isMoving or Unit(player):HasBuffs(A.DemonicCallingBuff.ID) > 0) then
+                    return A.CallDreadstalkers:Show(icon)
+                end
+                if A.HandofGuldan:IsReady(unitID, nil, nil, true) and not isMoving then
+                    return A.HandofGuldan:Show(icon)
+                end
+                if A.Implosion:IsReady(unitID, nil, nil, true) and (A.Implosion:GetCount() >= 6 or TTD < 3) then
+                    return A.Implosion:Show(icon)
                 end
             end
-            -- actions+=/implosion,if=time_to_die<2*gcd
-            if A.Implosion:IsReady(unitID) and TTD < 2 * A.GetGCD() then
-                return A.Implosion:Show(icon)
-            end
-            -- actions+=/nether_portal,if=!talent.summon_demonic_tyrant&soul_shard>2|time_to_die<30
-            if A.NetherPortal:IsReady(player) and not isMoving and BurstIsON(unitID) and (not A.SummonDemonicTyrant:IsTalentLearned() and soulShards > 2 or TTD < 30) then
+            if A.NetherPortal:IsReady(unitID, nil, nil, true) and useBurst and A.SummonDemonicTyrant:GetCooldown() < A.GetGCD() then
                 return A.NetherPortal:Show(icon)
             end
-            -- actions+=/hand_of_guldan,if=buff.nether_portal.up
-            if A.HandofGuldan:IsReady(unitID) and not isMoving and Unit(player):HasBuffs(A.NetherPortalBuff.ID) > A.HandofGuldan:GetSpellCastTime() then
-                return A.HandofGuldan:Show(icon)
+            if A.SummonDemonicTyrant:IsReady(player, nil, nil, true) and useBurst and (A.SummonVilefiend:GetCooldown() > 10 or not A.SummonVilefiend:IsTalentLearned()) and (A.GrimoireFelguard:GetCooldown() > 10 or not A.GrimoireFelguard:IsTalentLearned()) and A.CallDreadstalkers:GetCooldown() > 5 then
+                return A.SummonDemonicTyrant:Show(icon)
             end
-            -- actions+=/call_action_list,name=items
-            -- actions+=/call_action_list,name=ogcd,if=buff.demonic_power.up|!talent.summon_demonic_tyrant&(buff.nether_portal.up|!talent.nether_portal)
-
-            if Unit(player):HasBuffs(A.DemonicPower.ID) > 0 or not A.SummonDemonicTyrant:IsTalentLearned() and (Unit(player):HasBuffs(A.NetherPortalBuff.ID) > 0 or not A.NetherPortal:IsTalentLearned()) then
-                -- actions.ogcd=potion
-                if useRacial then
-                    -- actions.ogcd+=/berserking
-                    if A.Berserking:IsReady(player) then
-                        return A.Berserking:Show(icon)
-                    end
-                    -- actions.ogcd+=/blood_fury
-                    if A.BloodFury:IsReady(player) then
-                        return A.BloodFury:Show(icon)
-                    end
-                    -- actions.ogcd+=/fireblood
-                    if A.Fireblood:IsReady(player) then
-                        return A.Fireblood:Show(icon)
-                    end
-                end
-            end
-
-            -- actions+=/call_dreadstalkers,if=cooldown.summon_demonic_tyrant.remains_expected>cooldown
-            if A.CallDreadstalkers:IsReady(unitID) and not isMoving and summonDemonicTyrantExpected > 20 then
-                return A.CallDreadstalkers:Show(icon)
-            end
-            -- actions+=/call_dreadstalkers,if=!talent.summon_demonic_tyrant|time_to_die<14
-            if A.CallDreadstalkers:IsReady(unitID) and not isMoving and (not A.SummonDemonicTyrant:IsTalentLearned() or TTD < 14) then
-                return A.CallDreadstalkers:Show(icon)
-            end
-            -- actions+=/grimoire_felguard,if=!talent.summon_demonic_tyrant|time_to_die<cooldown.summon_demonic_tyrant.remains_expected
-            if A.GrimoireFelguard:IsReady(unitID) and (not A.SummonDemonicTyrant:IsTalentLearned() or TTD < summonDemonicTyrantExpected) then
-                return A.GrimoireFelguard:Show(icon)
-            end
-            -- actions+=/summon_vilefiend,if=!talent.summon_demonic_tyrant|cooldown.summon_demonic_tyrant.remains_expected>cooldown+variable.tyrant_prep_start|time_to_die<cooldown.summon_demonic_tyrant.remains_expected
-            if A.SummonVilefiend:IsReady(player) and not isMoving then
-                if not A.SummonDemonicTyrant:IsTalentLearned() or A.SummonDemonicTyrant:GetCooldown() > 1.2 + tyrantPrepStart or TTD < summonDemonicTyrantExpected > 45 + tyrantPrepStart or TTD < summonDemonicTyrantExpected then
-                    return A.SummonVilefiend:Show(icon)
-                end
-            end
-            -- actions+=/guillotine,if=cooldown.demonic_strength.remains
-            if A.Guillotine:IsReady(player) and A.DemonicStrength:GetCooldown() > 0 then
-                return A.Guillotine:Show(icon)
-            end
-            -- actions+=/demonic_strength
-            if A.DemonicStrength:IsReady(player) and Unit(pet):IsExists() then
+            if A.DemonicStrength:IsReady(player, nil, nil, true) then
                 return A.DemonicStrength:Show(icon)
             end
-            -- actions+=/bilescourge_bombers,if=!pet.demonic_tyrant.active
-            if A.BilescourgeBombers:IsReady(player) and Unit(player):HasBuffs(A.DemonicPower.ID) == 0 then
-                return A.BilescourgeBombers:Show(icon)
+            if A.SummonVilefiend:IsReady(unitID, nil, nil, true) then
+                return A.SummonVilefiend:Show(icon)
             end
-            -- actions+=/shadow_bolt,if=soul_shard<5&talent.fel_covenant&buff.fel_covenant.remains<5
-            if A.ShadowBolt:IsReady(unitID) and not isMoving and soulShards < 5 and A.FelCovenant:IsTalentLearned() and Unit(player):HasBuffs(A.FelCovenantBuff.ID) < 5 then
-                return A.ShadowBolt:Show(icon)
+            if A.GrimoireFelguard:IsReady(player, nil, nil, true) then
+                return A.GrimoireFelguard:Show(icon)
             end
-            -- actions+=/implosion,if=two_cast_imps>0&buff.tyrant.down&active_enemies>1+(talent.sacrificed_souls.enabled)
-            if A.Implosion:IsReady(unitID) and Unit(player):HasBuffs(A.DemonicPower.ID) == 0 and activeEnemies > (1 + num(A.SacrificedSouls:IsTalentLearned())) then
-                return A.Implosion:Show(icon)
-            end
-            -- actions+=/implosion,if=buff.wild_imps.stack>9&buff.tyrant.up&active_enemies>2+(1*talent.sacrificed_souls.enabled)&cooldown.call_dreadstalkers.remains>17&talent.the_expendables
-            if A.Implosion:IsReady(unitID) and A.Implosion:GetCount() > 9 and Unit(player):HasBuffs(A.DemonicPower.ID) > 0 and activeEnemies > 2 + (1 * num(A.SacrificedSouls:IsTalentLearned())) and A.CallDreadstalkers:GetCooldown() > 17 and A.TheExpendables:IsTalentLearned() then
-                return A.Implosion:Show(icon)
-            end
-            -- actions+=/implosion,if=active_enemies=1&last_cast_imps>0&buff.tyrant.down&talent.imp_gang_boss.enabled&!talent.sacrificed_souls
-            if A.Implosion:IsReady(unitID) and activeEnemies == 1 and Unit(player):HasBuffs(A.DemonicPower.ID) == 0 and A.ImpGangBoss:IsTalentLearned() and not A.SacrificedSouls:IsTalentLearned() then
-                return A.Implosion:Show(icon)
-            end
-            -- actions+=/soul_strike,if=soul_shard<5&active_enemies>1
-            if A.SoulStrike:IsReady(player) and Unit(pet):IsExists() and not Unit(pet):IsDead() and soulShards < 5 and activeEnemies > 1 then
+            if A.SoulStrike:IsReady(player, nil, nil, true) then
                 return A.SoulStrike:Show(icon)
             end
-            -- actions+=/summon_soulkeeper,if=active_enemies>1&buff.tormented_soul.stack=10
-            if A.SummonSoulkeeper:IsReady(player) and not isMoving and activeEnemies > 1 and A.SummonSoulkeeper:GetCount() == 10 then
-                return A.SummonSoulkeeper:Show(icon)
-            end
-            -- actions+=/demonbolt,if=buff.demonic_core.up&soul_shard<4
-            if A.Demonbolt:IsReady(unitID) and Unit(player):HasBuffs(A.DemonicCore.ID) > 0 and soulShards < 4 then
-                return A.Demonbolt:Show(icon)
-            end
-            -- actions+=/power_siphon,if=buff.demonic_core.stack<1&(buff.dreadstalkers.remains>3|buff.dreadstalkers.down)
-            if A.PowerSiphon:IsReady(player) and Unit(player):HasBuffs(A.DemonicCore.ID) < 1 and ((totemName == "Dreadstalker" and Player:GetTotemTimeLeft(1) > 3) or totemName ~= "Dreadstalker") then
-                return A.PowerSiphon:Show(icon)
-            end
-            -- actions+=/hand_of_guldan,if=soul_shard>2&(!talent.summon_demonic_tyrant|cooldown.summon_demonic_tyrant.remains_expected>variable.tyrant_prep_start+2)
-            if A.HandofGuldan:IsReady(unitID) and not isMoving and soulShards > 2 and (not A.SummonDemonicTyrant:IsTalentLearned() or summonDemonicTyrantExpected > tyrantPrepStart + 2 or soulShards == 5) then
-                return A.HandofGuldan:Show(icon)
-            end
-            -- actions+=/doom,target_if=refreshable
-            if A.Doom:IsReady(unitID) and Unit(unitID):HasDeBuffs(A.Doom.ID, true) == 0  then
+            if A.Doom:IsReady(unitID) and Unit(unitID):TimeToDie() >= 20 then
                 return A.Doom:Show(icon)
             end
-            -- actions+=/soul_strike,if=soul_shard<5
-            if A.SoulStrike:IsReady(unitID) and soulShards < 5 and Unit(pet):IsExists() and not Unit(pet):IsDead() then
-                return A.SoulStrike:Show(icon)
+            if A.Guillotine:IsReady(player, nil, nil, true) then
+                return A.Guillotine:Show(icon)
             end
-            -- actions+=/shadow_bolt
-            if A.ShadowBolt:IsReady(unitID) and not isMoving then
-                return A.ShadowBolt:Show(icon)
+            if A.PowerSiphon:IsReady(player, nil, nil, true) and Unit(player):HasBuffsStacks(A.DemonicCore.ID) < 3 then
+                return A.PowerSiphon:Show(icon)
             end
-
-            if A.Demonbolt:IsReady(unitID) and Unit(player):HasBuffs(A.DemonicCore.ID) > 0 then
+            if A.CallDreadstalkers:IsReady(unitID, nil, nil, true) then
+                return A.CallDreadstalkers:Show(icon)
+            end
+            if A.HandofGuldan:IsReady(unitID, nil, nil, true) then
+                return A.HandofGuldan:Show(icon)
+            end
+            if A.Demonbolt:IsReady(unitID, nil, nil, true) and Unit(player):HasBuffs(A.DemonicCore.ID) > 0 then
                 return A.Demonbolt:Show(icon)
             end
-
+            if A.ShadowBolt:IsReady(unitID, nil, nil, true) then
+                return A.ShadowBolt:Show(icon)
+            end
         end
 
     end

@@ -1,6 +1,6 @@
---################################
---##### TRIP'S BALANCE DRUID #####
---################################
+--##############################
+--##### TRIP'S FERAL DRUID #####
+--##############################
 
 local _G, setmetatable							= _G, setmetatable
 local A                         			    = _G.Action
@@ -38,7 +38,7 @@ local pairs                                     = pairs
 local Toaster									= _G.Toaster
 local GetSpellTexture 							= _G.TMW.GetSpellTexture
 
-Action[ACTION_CONST_DRUID_BALANCE] = {
+Action[ACTION_CONST_DRUID_FERAL] = {
 	--Racial 
     ArcaneTorrent				= Action.Create({ Type = "Spell", ID = 50613	}),
     BloodFury					= Action.Create({ Type = "Spell", ID = 20572	}),
@@ -58,7 +58,6 @@ Action[ACTION_CONST_DRUID_BALANCE] = {
     EscapeArtist				= Action.Create({ Type = "Spell", ID = 20589    }), 
     EveryManforHimself			= Action.Create({ Type = "Spell", ID = 59752    }),
     LightsJudgment				= Action.Create({ Type = "Spell", ID = 255647   }), 	
-	Regeneratin					= Action.Create({ Type = "Spell", ID = 291944   }), 
 	
 	--General
     EntanglingRoots= Action.Create({ Type = "Spell", ID = 339 }),
@@ -328,7 +327,7 @@ Action[ACTION_CONST_DRUID_BALANCE] = {
 	SpiritofRedemption				= Action.Create({ Type = "Spell", ID = 27827, Hidden = true   }),
 }
 
-local A = setmetatable(Action[ACTION_CONST_DRUID_BALANCE], { __index = Action })
+local A = setmetatable(Action[ACTION_CONST_DRUID_FERAL], { __index = Action })
 
 local function num(val)
     if val then return 1 else return 0 end
@@ -567,22 +566,17 @@ local function FutureAstralPower()
     local AstralPower = Player:AstralPower()
     local castName, castStartTime, castEndTime, notInterruptable, spellID, isChannel = Unit(player):IsCasting()
         
-    if spellID == A.Wrath.ID then
-		return AstralPower + 10
-	elseif spellID == A.Starfire.ID then
-		return AstralPower + 12
-	elseif spellID == A.StellarFlare.ID then
-		return AstralPower + 12
+    if spellID == A.Wrath.ID or spellID == A.Starfire.ID or spellID == A.StellarFlare.ID then
+		return AstralPower + 8
 	elseif spellID == A.NewMoon.ID then
-		return AstralPower + 12
+		return AstralPower + 10
 	elseif spellID == A.HalfMoon.ID then
-		return AstralPower + 24
+		return AstralPower + 20
 	elseif spellID == A.FullMoon.ID then
-		return AstralPower + 50
+		return AstralPower + 40
 		else return AstralPower
 	end
 end
-
 
 --- ======= ACTION LISTS =======
 -- [3] Single Rotation
@@ -622,211 +616,40 @@ A[3] = function(icon, isMulti)
 
     local function EnemyRotation(unitID)
 
-		local activeEnemies = MultiUnits:GetActiveEnemies()
 		local useAoE = A.GetToggle(2, "AoE")
 		local isAoE = activeEnemies > 1 and useAoE
-		local incarnationTime = Unit(player):HasBuffs(A.IncCABuff.ID, true, true)
-		local celestialAlignmentTime = Unit(player):HasBuffs(A.CelestialAlignment.ID, true, true)
-		local noCDTalent = not A.CelestialAlignment:IsTalentLearned() and not A.IncarnationChosenofElune:IsTalentLearned()
-		local refreshMoonfire = Unit(unitID):HasDeBuffs(A.MoonfireDebuff.ID, true) < A.MoonfireDebuff:GetSpellPandemicThreshold() and Unit(unitID):TimeToDie() > 18
-		local refreshSunfire = Unit(unitID):HasDeBuffs(A.SunfireDebuff.ID, true) < A.SunfireDebuff:GetSpellPandemicThreshold() and Unit(unitID):TimeToDie() > 18
-		local refreshStellarFlare = Unit(unitID):HasDeBuffs(A.StellarFlare.ID, true) < A.StellarFlare:GetSpellPandemicThreshold() and Unit(unitID):TimeToDie() > 22 and Unit(player):IsCasting() ~= A.StellarFlare:Info()
-		local astralPower = Player:AstralPower()
-		local astralPowerDeficit = Player:AstralPowerDeficit()
-		local hasLunar = Unit(player):HasBuffs(A.LunarEclipse.ID)
-		local hasSolar = Unit(player):HasBuffs(A.SolarEclipse.ID)
-		local hasEclipse = hasLunar > 0 or hasSolar > 0
-		local finishedDoTs 
-		if activeEnemies >= 4 then
-			finishedDoTs = Player:GetDeBuffsUnitCount(A.MoonfireDebuff.ID) >= (activeEnemies - 1) and Player:GetDeBuffsUnitCount(A.SunfireDebuff.ID) >= (activeEnemies - 1) and not refreshMoonfire and not refreshSunfire
-		else finishedDoTs = Player:GetDeBuffsUnitCount(A.MoonfireDebuff.ID) >= (activeEnemies) and Player:GetDeBuffsUnitCount(A.SunfireDebuff.ID) >= (activeEnemies) and not refreshMoonfire and not refreshSunfire
+
+		--actions=cat_form,if=buff.cat_form.down
+		if A.CatForm:IsReady(player) and Unit(player):HasBuffs(A.CatForm.ID, true) == 0 and AutoCatForm and ((Unit(player):HasBuffs(A.FrenziedRegeneration.ID) == 0 and A.FrenziedRegeneration:GetCooldown() > 0) or Unit(player):HealthPercent() >= 80) then 
+			return A.CatForm:Show(icon)
 		end
-		local useBurst = inCombat and BurstIsON(unitID) and (Unit(unitID):TimeToDie() > 20 or Unit(unitID):IsBoss()) and finishedDoTs
-		local futureAstralPower = FutureAstralPower()
-		local starlordStacks = Unit(player):HasBuffsStacks(A.StarlordBuff.ID, true, true)
+
+		--actions+=/prowl
+		if A.Prowl:IsReady(player) and not inCombat and Unit(player):HasBuffs(A.Prowl.ID, true) == 0 and not Player:IsMounted() and not Player:IsStealthed() then
+			return A.Prowl:Show(icon)
+		end
+
+		-- actions+=/call_action_list,name=variables
+		-- actions+=/tigers_fury,if=!talent.convoke_the_spirits.enabled&(!buff.tigers_fury.up|energy.deficit>65)
+		-- actions+=/tigers_fury,if=talent.convoke_the_spirits.enabled&(!variable.lastConvoke|(variable.lastConvoke&!buff.tigers_fury.up))
+		-- actions+=/rake,target_if=1.4*persistent_multiplier>dot.rake.pmultiplier,if=buff.prowl.up|buff.shadowmeld.up
+		-- actions+=/auto_attack,if=!buff.prowl.up&!buff.shadowmeld.up
+		-- actions+=/natures_vigil,if=in_combat
+		-- actions+=/adaptive_swarm,if=!(variable.need_bt&active_bt_triggers=2)&(!talent.unbridled_swarm.enabled|spell_targets.swipe_cat=1)
+		-- actions+=/adaptive_swarm,if=dot.adaptive_swarm_damage.stack<3&talent.unbridled_swarm.enabled&spell_targets.swipe_cat>1&!(variable.need_bt&active_bt_triggers=2)
+		-- actions+=/call_action_list,name=cooldown
+		-- actions+=/feral_frenzy,target_if=max:target.time_to_die,if=combo_points<2|combo_points<3&buff.bs_inc.up
+		-- actions+=/ferocious_bite,target_if=max:target.time_to_die,if=buff.apex_predators_craving.up&(spell_targets.swipe_cat=1|!talent.primal_wrath.enabled|!buff.sabertooth.up)&!(variable.need_bt&active_bt_triggers=2)
+		-- actions+=/call_action_list,name=berserk,if=buff.bs_inc.up
+		-- actions+=/wait,sec=combo_points=5,if=combo_points=4&buff.predator_revealed.react&energy.deficit>40&spell_targets.swipe_cat=1
+		-- # its acceptable to proc bt when at 4cps in single target for a small gain (0.1-0.2% with t30 4p)
+		-- actions+=/call_action_list,name=finisher,if=combo_points>=4&!(combo_points=4&buff.bloodtalons.stack<=1&active_bt_triggers=2&spell_targets.swipe_cat=1)
+		-- actions+=/call_action_list,name=bloodtalons,if=variable.need_bt&!buff.bs_inc.up&combo_points<5
+		-- actions+=/call_action_list,name=aoe_builder,if=spell_targets.swipe_cat>1&talent.primal_wrath.enabled
+		-- actions+=/call_action_list,name=builder,if=!buff.bs_inc.up&combo_points<5
+		-- actions+=/regrowth,if=energy<20&buff.predatory_swiftness.up&!buff.clearcasting.up&variable.regrowth
 		
-		local passiveASP = (0.06 * Player:HastePct() + num(A.NaturesBalance:IsTalentLearned()) + num(A.OrbitBreaker:IsTalentLearned()) * num(Player:GetDeBuffsUnitCount(A.Moonfire.ID) > 0) * num(Unit(player):HasBuffsStacks(A.OrbitBreaker.ID) > (27 - 2 * num(Unit(player):HasBuffs(A.Solstice.ID) > 0))) * 40)
-		local spendAP = futureAstralPower >= (75 - passiveASP) or (starlordStacks > 0 and starlordStacks < 3) or not A.Starlord:IsTalentLearned()
-		
-		local dumpAPStarsurge = (incarnationTime > 0 and incarnationTime < ((futureAstralPower / 40)) * A.GetGCD()) or (celestialAlignmentTime > 0 and celestialAlignmentTime < ((futureAstralPower / 40) * A.GetGCD()))
 
-		local dumpAPStarfall = (incarnationTime > 0 and incarnationTime < ((futureAstralPower / 50)) * A.GetGCD()) or (celestialAlignmentTime > 0 and celestialAlignmentTime < ((futureAstralPower / 50) * A.GetGCD()))
-		
-		enteringLunar = Temp.enteringLunar
-		enteringSolar = Temp.enteringSolar
-		enteringEclipse = enteringLunar or enteringSolar
-
-		if Unit(player):IsCasting() == A.Wrath:Info() and A.Wrath:GetCount() == 1 then
-			Temp.enteringLunar = true
-			else Temp.enteringLunar = false
-		end
-		if Unit(player):IsCasting() == A.Starfire:Info() and A.Starfire:GetCount() == 1 then
-			Temp.enteringSolar = true
-			else Temp.enteringSolar = false
-		end
-
-		if Player:PrevGCD(1, A.WildMushroom) then
-			Temp.delayMushroom = true
-			else Temp.delayMushroom = false
-		end
-
-		--CancelAura
-		if Unit(player):HasBuffs(A.Starlord.ID) > 0 and Unit(player):HasBuffs(A.Starlord.ID) < 2 then
-			return A.Regeneratin:Show(icon)
-		end
-
-        -- Interrupts
-        local Interrupt = Interrupts(unitID)
-        if Interrupt then 
-            return Interrupt:Show(icon)
-        end
-
-		local DoPurge = Purge(unitID)
-		if DoPurge then 
-			return DoPurge:Show(icon)
-		end	
-
-		if A.MoonkinForm:IsReady(player) and Unit(player):HasBuffs(A.MoonkinForm.ID) == 0 then
-			return A.MoonkinForm:Show(icon)
-		end
-
-		if A.WarriorofElune:IsReady(player) then
-			return A.WarriorofElune:Show(icon)
-		end
-
-		local UseTrinket = UseTrinkets(unitID)
-		if UseTrinket and useBurst then
-			return UseTrinket:Show(icon)
-		end  
-
-		if Unit(player):IsCastingRemains() < 0.5 and A.Moonfire:IsInRange(unitID) then
-
-			if Unit(unitID):IsExplosives() then
-				if A.Moonfire:IsReady(unitID, nil, nil, true) then
-					return A.Moonfire:Show(icon)
-				end
-			end
-
-			if not Unit(unitID):IsExplosives() then
-				--[[if A.Starsurge:IsReady(unitID) and Unit(unitID):Health() <= (A.Starsurge:GetSpellDescription()[1] * 1000) then
-					return A.Starsurge:Show(icon)
-				end]]
-				if A.Starfire:IsReady(unitID) and Unit(player):HasBuffs(A.WarriorofElune.ID) > 0 and Unit(unitID):Health() <= A.Starfire:GetSpellDescription()[1] and (hasEclipse or enteringLunar) then
-					return A.Starfire:Show(icon)
-				end
-			end
-
-			if A.Moonfire:IsReady(unitID, nil, nil, true) and refreshMoonfire then
-				return A.Moonfire:Show(icon)
-			end
-
-			if A.Sunfire:IsReady(unitID, nil, nil, true) and refreshSunfire then
-				return A.Sunfire:Show(icon)
-			end
-
-			if A.ForceofNature:IsReady(player, nil, nil, true) then
-				return A.ForceofNature:Show(icon)
-			end
-
-			if not hasEclipse and astralPowerDeficit >= 20 then
-				if A.Wrath:IsReady(unitID, nil, nil, true) and not isMoving and not enteringEclipse then
-					return A.Wrath:Show(icon)
-				end
-			end
-
-			if A.Starsurge:IsReady(unitID, nil, nil, true) then
-				if activeEnemies == 1 and (spendAP or dumpAPStarsurge or isMoving) then
-					return A.Starsurge:Show(icon)
-				end
-				if Unit(player):HasBuffs(A.FreeStarsurge.ID) > 0 and ((starlordStacks > 0 and starlordStacks < 3) or not A.Starlord:IsTalentLearned()) then
-					return A.Starsurge:Show(icon)
-				end
-			end
-
-			if A.Starfall:IsReady(player, nil, nil, true) then
-				if (activeEnemies > 1) and (spendAP or dumpAPStarfall or isMoving) then
-					return A.Starfall:Show(icon)
-				end
-				if Unit(player):HasBuffs(A.FreeStarfall.ID) > 0 and ((starlordStacks > 0 and starlordStacks < 3) or not A.Starlord:IsTalentLearned()) then
-					return A.Starfall:Show(icon)
-				end
-			end
-
-			if A.StellarFlare:IsReady(unitID, nil, nil, true) and not isMoving and refreshStellarFlare and activeEnemies == 1 then
-				return A.StellarFlare:Show(icon)
-			end
-
-			if A.WildMushroom:IsReady(unitID, nil, nil, true) and not Temp.delayMushroom then
-				if activeEnemies > 1 then
-					return A.WildMushroom:Show(icon)
-				end
-				if A.WaningTwilight:IsTalentLearned() and A.FungalGrowth:IsTalentLearned() and Unit(unitID):HasDeBuffs(A.FungalGrowthDebuff.ID, true) < A.GetGCD() then
-					return A.WildMushroom:Show(icon)
-				end
-			end
-		
-			if A.CelestialAlignment:IsReady(player, nil, nil, true) and useBurst then
-				return A.CelestialAlignment:Show(icon)
-			end
-
-			if A.AstralCommunion:IsReady(player, nil, nil, true) and astralPowerDeficit > passiveASP + 50 then
-				return A.AstralCommunion:Show(icon)
-			end
-
-			if A.FuryofElune:IsReady(unitID, nil, nil, true) and astralPowerDeficit >= 20 then
-				return A.FuryofElune:Show(icon)
-			end
-
-			if A.WildMushroom:IsReady(unitID, nil, nil, true) and activeEnemies == 1 and A.FungalGrowth:IsTalentLearned() and not Temp.delayMushroom and Unit(unitID):HasDeBuffs(A.FungalGrowthDebuff.ID, true) == 0 then
-				return A.WildMushroom:Show(icon)
-			end
-
-			if A.ConvoketheSpirits:IsReady(player, nil, nil, true) and useBurst and astralPower <= 20 and Unit(unitID):TimeToDie() > 15 then
-				return A.ConvoketheSpirits:Show(icon)
-			end
-
-			-- actions.st+=/new_moon,if=astral_power.deficit>variable.passive_asp+10&(buff.ca_inc.up|charges_fractional>2.5&buff.primordial_arcanic_pulsar.value<=520&cooldown.ca_inc.remains>10|fight_remains<10)
-			-- actions.st+=/half_moon,if=astral_power.deficit>variable.passive_asp+20&(buff.eclipse_lunar.remains>execute_time|buff.eclipse_solar.remains>execute_time)&(buff.ca_inc.up|charges_fractional>2.5&buff.primordial_arcanic_pulsar.value<=520&cooldown.ca_inc.remains>10|fight_remains<10)
-			-- actions.st+=/full_moon,if=astral_power.deficit>variable.passive_asp+40&(buff.eclipse_lunar.remains>execute_time|buff.eclipse_solar.remains>execute_time)&(buff.ca_inc.up|charges_fractional>2.5&buff.primordial_arcanic_pulsar.value<=520&cooldown.ca_inc.remains>10|fight_remains<10)
-			
-			local papValue = Unit(player):HasBuffsStacks(393961) -- Placeholder, replace with the correct value from the tooltip of buffID 393961
-			
-			-- New Moon
-			if A.NewMoon:IsReady(unitID, nil, nil, true) and Unit(player):IsCasting() ~= A.NewMoon:Info() and astralPowerDeficit > passiveASP + 10 + futureAstralPower and (Unit(player):HasBuffs(A.CelestialAlignment.ID) > 0 or A.NewMoon:GetSpellChargesFrac() > 2.5 and papValue <= 87 and (A.CelestialAlignment:GetCooldown() > 10 or A.IncarnationChosenofElune:GetCooldown() > 10) or Unit(unitID):TimeToDie() < 10) then
-				return A.NewMoon:Show(icon)
-			end
-			
-			-- Half Moon
-			if A.HalfMoon:IsReady(unitID, nil, nil, true) and Unit(player):IsCasting() ~= A.HalfMoon:Info() and astralPowerDeficit > passiveASP + 20 + futureAstralPower and (hasLunar > A.HalfMoon:GetSpellCastTime() or hasSolar > A.HalfMoon:GetSpellCastTime()) and (Unit(player):HasBuffs(A.CelestialAlignment.ID) > 0 or A.HalfMoon:GetSpellChargesFrac() > 2.5 and papValue <= 87 and (A.CelestialAlignment:GetCooldown() > 10 or A.IncarnationChosenofElune:GetCooldown() > 10) or Unit(unitID):TimeToDie() < 10) then
-				return A.HalfMoon:Show(icon)
-			end
-			
-			-- Full Moon
-			if A.FullMoon:IsReady(unitID, nil, nil, true) and Unit(player):IsCasting() ~= A.FullMoon:Info() and astralPowerDeficit > passiveASP + 40 + futureAstralPower and (hasLunar > A.FullMoon:GetSpellCastTime() or hasSolar > A.FullMoon:GetSpellCastTime()) and (Unit(player):HasBuffs(A.CelestialAlignment.ID) > 0 or A.FullMoon:GetSpellChargesFrac() > 2.5 and papValue <= 87 and (A.CelestialAlignment:GetCooldown() > 10 or A.IncarnationChosenofElune:GetCooldown() > 10) or Unit(unitID):TimeToDie() < 10) then
-				return A.FullMoon:Show(icon)
-			end
-
-			if A.Starfire:IsReady(unitID, nil, nil, true) and (not isMoving or Unit(player):HasBuffs(A.WarriorofElune.ID) > 0) and Unit(player):HasBuffs(A.UmbralEmbraceBuff.ID) > A.Starfire:GetSpellCastTime() and (hasEclipse or enteringLunar) and Unit(player):IsCasting() ~= A.Starfire:Info() then
-				return A.Starfire:Show(icon)
-			end
-
-			if A.StellarFlare:IsReady(unitID, nil, nil, true) and refreshStellarFlare and activeEnemies > 1 then
-				return A.StellarFlare:Show(icon)
-			end
-			
-			if A.Starfire:IsReady(unitID, nil, nil, true) and (not isMoving or Unit(player):HasBuffs(A.WarriorofElune.ID) > 0) and activeEnemies > 1 and (hasEclipse or enteringLunar) then
-				return A.Starfire:Show(icon)
-			end
-
-			if A.Wrath:IsReady(unitID, nil, nil, true) and not isMoving then
-				return A.Wrath:Show(icon)
-			end
-
-		end
-
-		if A.Moonfire:IsReady(unitID) then
-			return A.Moonfire:Show(icon)
-		end
 
     end
 

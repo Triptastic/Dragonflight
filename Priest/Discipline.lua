@@ -126,6 +126,7 @@ Action[ACTION_CONST_PRIEST_DISCIPLINE] = {
 	TwilightEqualibrium				= Action.Create({ Type = "Spell", ID = 390705, Hidden = true   }),
 	TwilightEqualibriumHoly			= Action.Create({ Type = "Spell", ID = 390706, Hidden = true   }),
 	TwilightEqualibriumShadow		= Action.Create({ Type = "Spell", ID = 390707, Hidden = true   }),
+	RhapsodyBuff					= Action.Create({ Type = "Spell", ID = 390636, Hidden = true   }),
 	ArcaneBravery					= Action.Create({ Type = "Spell", ID = 385841, Hidden = true   }),	
 	SpiritofRedemption				= Action.Create({ Type = "Spell", ID = 27827, Hidden = true   }),
 	Healthstone     = Action.Create({ Type = "Item", ID = 5512 }),
@@ -434,6 +435,8 @@ local function HealCalc(heal)
 		healamount = A.Halo:GetSpellDescription()[3]
 	elseif heal == A.DivineStar then
 		healamount = A.DivineStar:GetSpellDescription()[3] * 2
+	elseif heal == A.HolyNova then
+		healamount = A.HolyNova:GetSpellDescription()[3]
 	end
 
 	return (healamount * 1000) * globalhealmod
@@ -507,6 +510,7 @@ A[3] = function(icon, isMulti)
 		local FlashHealSoLHP = A.GetToggle(2, "FlashHealSoLHP")
 		local PenanceHP = A.GetToggle(2, "PenanceHP")
 		local PowerWordRadianceHP = A.GetToggle(2, "PowerWordRadianceHP")
+		local HolyNovaHP = A.GetToggle(2, "HolyNovaHP")
 		local ShadowCovenantHP = A.GetToggle(2, "ShadowCovenantHP")
 		local HaloHP = A.GetToggle(2, "HaloHP")
 		local DivineStarHP = A.GetToggle(2, "DivineStarHP")
@@ -583,6 +587,25 @@ A[3] = function(icon, isMulti)
 				end
 			end]]
 		
+			local HolyNovaTotal = 0
+			if A.HolyNova:IsReady(player, nil, nil, true) and Unit(player):HasBuffsStacks(A.RhapsodyBuff.ID) >= 20 then
+				if HolyNovaHP >= 100 then
+					for _, HNUnit in pairs(TeamCache.Friendly.GUIDs) do
+						if Unit(HNUnit):HealthDeficit() >= HealCalc(A.HolyNova) and Unit(HNUnit):GetRange() <= 12 and not Unit(HNUnit):InVehicle() then
+							HolyNovaTotal = HolyNovaTotal + 1
+						end
+						if HolyNovaTotal >= 3 then
+							HolyNovaTotal = 0
+							return A.HolyNova:Show(icon)
+						end 
+					end
+				elseif HolyNovaHP <= 99 then
+					if HealingEngine.GetBelowHealthPercentUnits(HolyNovaHP, 12) >= 3 then
+						return A.HolyNova:Show(icon)
+					end
+				end
+			end
+
 			local PWRadianceTotal = 0
 			if A.PowerWordRadiance:IsReady(unitID, nil, nil, true) and not isMoving and not stopCasting and A.PowerWordRadiance:GetSpellCastTime() < quakingTime + 0.5 and Unit(player):IsCasting() ~= A.PowerWordRadiance:Info() then
 				if PowerWordRadianceHP >= 100 then
@@ -762,10 +785,6 @@ A[3] = function(icon, isMulti)
 
 			if A.LightsWrath:IsReady(unitID, nil, nil, true) and not stopCasting and not isMoving and A.LightsWrath:GetSpellCastTime() < quakingTime + 0.5 and HealingEngine.GetBuffsCount(A.Atonement.ID, A.LightsWrath:GetSpellCastTime()) >= HealingEngine.GetMinimumUnits(1, 10) then
 				return A.LightsWrath:Show(icon)
-			end
-
-			if A.HolyNova:IsReady(player, nil, nil, true) and MultiUnits:GetByRangeInCombat(12, 5) >= 4 then
-				return A.HolyNova:Show(icon)
 			end
 
 			if A.DivineStar:IsReady(player, nil, nil, true) and Unit(unitID):GetRange() <= 20 then

@@ -604,6 +604,23 @@ A.Data.ProfileUI = {
                 },	
             },	
             {
+                { -- HolyNovaHP
+                    E = "Slider",                                                     
+                    MIN = 0, 
+                    MAX = 100,                            
+                    DB = "HolyNovaHP",
+                    DBV = 100,
+                    ONOFF = true,
+                    L = { 
+                        ANY = "Holy Nova HP (%)",
+                    },
+                    TT = { 
+                        ANY = "HP (%) to use Holy Nova (only used with 20 stacks of Rhapsody).", 
+                    },                     
+                    M = {},
+                },	
+            },
+            {
                 { -- VoidShiftTarget
                     E = "Slider",                                                     
                     MIN = 0, 

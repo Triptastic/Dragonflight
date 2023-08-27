@@ -194,18 +194,29 @@ local Temp = {
                                                 106228, -- Nothingness
                                                 388008, -- Absolute Zero
                                                 191284, -- Horn of Valor (HoV)
+												378020, -- Gash Frenzy (Brackenhide)
+
 	},	
 	scaryCasts                              = { 396023, --Incinerating Roar
 												376279, --Concussive Slam
 												388290, --Cyclone
 												375457, --Chilling Tantrum
 	},
-stopCasting                             	= { 377004, --Deafening Screech
+	stopCasting                             = { 377004, --Deafening Screech
 												397892, --Scream of Pain
 												196543, --Unnerving Howl
 												199726, --Unruly Yell
 												381516, --Interrupting Cloudburst
 												384365, --Disruptive Shout
+	},
+	externalDefensive						= {	378229, --Marked for Butchery
+
+	},
+	selfDefensiveCast						= {
+
+	},
+	selfDefensiveDebuff						= {
+
 	},
 }
 
@@ -245,7 +256,7 @@ local function SelfDefensives()
     local useRacial = A.GetToggle(1, "Racial")
 
     if noDefensiveActive then
-        if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1 then
+        if MultiUnits:GetByRangeCasting(60, 1, nil, Temp.selfDefensiveCast) >= 1 or Unit(player):HasDeBuffs(Temp.selfDefensiveDebuff) > 0 then
             if A.DiffuseMagic:IsReady(player) then
                 return A.DiffuseMagic
             end
@@ -476,7 +487,7 @@ A[3] = function(icon, isMulti)
 				return A.FaelineStomp:Show(icon)
 			end
 			
-			if A.SpinningCraneKick:IsReady(player) and MultiUnits:GetByRange(3, 10) >= 3 and UseAoE and not stopCasting then
+			if A.SpinningCraneKick:IsReady(player) and MultiUnits:GetByRange(3, 10) >= 4 and UseAoE and not stopCasting then
 				return A.SpinningCraneKick:Show(icon)
 			end
 			
@@ -552,6 +563,10 @@ A[3] = function(icon, isMulti)
 
 			if A.Detox:IsReady(unitID) and Cleanse and AuraIsValid(unitID, "UseDispel", "Dispel") then
 				return A.Detox:Show(icon)
+			end
+
+			if A.SpinningCraneKick:IsReady(player) and MultiUnits:GetByRange(3, 10) >= 7 and UseAoE and not stopCasting then
+				return A.SpinningCraneKick:Show(icon)
 			end
 
 			if Unit(player):HasBuffsStacks(A.ChiJisBlessing.ID) >= 3 then

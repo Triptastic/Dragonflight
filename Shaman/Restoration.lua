@@ -475,6 +475,7 @@ A[3] = function(icon, isMulti)
 	local combatTime = Unit(player):CombatTime()
 	local getmembersAll = HealingEngine.GetMembersAll()
 	local stopCasting = MultiUnits:GetByRangeCasting(60, 1, nil, Temp.stopCasting) >= 1
+	local TTD = MultiUnits.GetByRangeAreaTTD(40)
 	local quakingTime = 99
 	if Unit(player):HasDeBuffs(A.Quaking.ID) > 0 then
 		quakingTime = Unit(player):HasDeBuffs(A.Quaking.ID)
@@ -830,6 +831,10 @@ A[3] = function(icon, isMulti)
             end
 		end
         
+		if A.HealingRain:IsReady(player) and TTD > 7 and (not isMoving or hasSpiritwalkersGrace) then
+			return A.HealingRain:Show(icon)
+		end
+
 		if A.Stormkeeper:IsReady(player) and (not isMoving or hasSpiritwalkersGrace) and A.Stormkeeper:GetSpellCastTime() < quakingTime + 0.5 then
 			return A.Stormkeeper:Show(icon)
 		end

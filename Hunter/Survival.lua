@@ -151,6 +151,12 @@ Action[ACTION_CONST_HUNTER_SURVIVAL] = {
     MongooseFury    			= Action.Create({ Type = "Spell", ID = 259388, Hidden = true	}), 
     CoordinatedKill    			= Action.Create({ Type = "Spell", ID = 385739, Hidden = true	}),
     Ranger    			= Action.Create({ Type = "Spell", ID = 385695, Hidden = true	}),
+    BirdsofPrey    			= Action.Create({ Type = "Spell", ID = 260331, Hidden = true	}),
+    ShreddedArmor    			= Action.Create({ Type = "Spell", ID = 410167, Hidden = true	}),
+    Bombardier    			= Action.Create({ Type = "Spell", ID = 389880, Hidden = true	}),
+    SeethingRage    			= Action.Create({ Type = "Spell", ID = 408835, Hidden = true	}),
+    RuthlessMarauder    			= Action.Create({ Type = "Spell", ID = 385718, Hidden = true	}),
+    AlphaPredator    			= Action.Create({ Type = "Spell", ID = 269737, Hidden = true	}),
 }
 
 local A = setmetatable(Action[ACTION_CONST_HUNTER_SURVIVAL], { __index = Action })
@@ -183,7 +189,7 @@ local Temp = {
 }
 
 local function InMelee(unitID)
-    return A.RaptorStrike:IsInRange(unitID)
+    return A.Muzzle:IsInRange(unitID)
 end 
 InMelee = A.MakeFunctionCachedDynamic(InMelee)
 
@@ -415,10 +421,23 @@ A[3] = function(icon, isMulti)
 	local combatTime = Unit(player):CombatTime()
     local ShouldStop = Action.ShouldStop()
 
+    Player:AddTier("Tier30", { 202479, 202477, 202480, 202478, 202482, })
+    local T30has2P = Player:HasTier("Tier30", 2)
+    local T30has4P = Player:HasTier("Tier30", 4)
+
+
     local function EnemyRotation(unitID)
         local useRacial = A.GetToggle(1, "Racial")
         local CoordinatedAssaultUp = Unit(player):HasBuffs(A.CoordinatedAssault.ID) > 0
         local SpearheadUp = Unit(player):HasBuffs(A.Spearhead.ID) > 0
+        
+        local mb_rs_cost
+
+        if A.MongooseBite:IsTalentLearned() then
+            mb_rs_cost = A.MongooseBite:GetSpellPowerCost()
+        else
+            mb_rs_cost = A.RaptorStrike:GetSpellPowerCost()
+        end
 
         local MendPetHP = A.GetToggle(2, "MendPetHP")
         if A.MendPet:IsReady(player) and Unit(pet):IsExists() and Unit(pet):HealthPercent() <= MendPetHP and Unit(pet):HealthPercent() > 0 and Unit(pet):HasBuffs(A.MendPet.ID, true) == 0 and Unit(pet):GetRange() < 40 then
@@ -453,9 +472,9 @@ A[3] = function(icon, isMulti)
         actions+=/call_action_list,name=cleave,if=active_enemies>2
         actions+=/arcane_torrent]]
 
-        if A.BurstIsON(unitID) and InMelee() then
-            --actions.cds+=/harpoon,if=talent.terms_of_engagement.enabled
-            if A.Harpoon:IsReady(unitID) and A.TermsofEngagement:IsTalentLearned() then
+        if A.BurstIsON(unitID) and InMelee(unitID) then
+            --actions.cds+=/harpoon,if=talent.terms_of_engagement.enabled&focus<focus.max
+            if A.Harpoon:IsReady(unitID) and A.TermsofEngagement:IsTalentLearned() and Player:Focus() < Player:FocusMax() then
                 return A.Harpoon:Show(icon)
             end
 
@@ -504,29 +523,29 @@ A[3] = function(icon, isMulti)
         end
 
         if A.MultiUnits:GetByRangeInCombat(10, 5) > 2 then
-            --actions.cleave+=/wildfire_bomb,if=full_recharge_time<gcd
-            if A.WildfireBomb:IsReady(unitID) and A.WildfireBomb:GetSpellChargesFullRechargeTime() < A.GetGCD() then
-                return A.WildfireBombDebuff:Show(icon)
+            --actions.cleave=kill_shot,if=buff.coordinated_assault_empower.up&talent.birds_of_prey
+            if A.KillShot:IsReady(unitID) and CoordinatedAssaultUp and A.BirdsofPrey:IsTalentLearned() then
+                return A.KillShot:Show(icon)
             end
 
             --actions.cleave+=/death_chakram
             if A.DeathChakram:IsReady(unitID) then
                 return A.DeathChakram:Show(icon)
             end
-            
+
+            --actions.cleave+=/wildfire_bomb
+            if A.WildfireBomb:IsReady(unitID) then
+                return A.WildfireBombDebuff:Show(icon)
+            end
+
             --actions.cleave+=/stampede
-            if A.Stampede:IsReady(player) then
+            if A.Stampede:IsReady(player) and InMelee(unitID) then
                 return A.Stampede:Show(icon)
             end
 
-            --actions.cleave+=/coordinated_assault
-            if A.CoordinatedAssault:IsReady(unitID) and BurstIsON(unitID) then
+            --actions.cleave+=/coordinated_assault,if=cooldown.fury_of_the_eagle.remains|!talent.fury_of_the_eagle
+            if A.CoordinatedAssault:IsReady(unitID) and BurstIsON(unitID) and (A.FuryoftheEagle:GetCooldown() > 0 or not A.FuryoftheEagle:IsTalentLearned()) then
                 return A.Stoneform:Show(icon)
-            end
-
-            --actions.cleave+=/kill_shot,if=buff.coordinated_assault_empower.up
-            if A.KillShot:IsReady(unitID) and CoordinatedAssaultUp then
-                return A.KillShot:Show(icon)
             end
 
             --actions.cleave+=/explosive_shot
@@ -535,7 +554,7 @@ A[3] = function(icon, isMulti)
             end
             
             --actions.cleave+=/carve,if=cooldown.wildfire_bomb.full_recharge_time>spell_targets%2
-            if A.Carve:IsReady(player) and A.WildfireBomb:GetSpellChargesFullRechargeTime() > (A.MultiUnits:GetByRangeInCombat(10, 5) % 2) then
+            if A.Carve:IsReady(player) and InMelee(unitID) and A.WildfireBomb:GetSpellChargesFullRechargeTime() > (A.MultiUnits:GetByRangeInCombat(10, 5) % 2) then
                 return A.Carve:Show(icon)
             end
 
@@ -569,8 +588,8 @@ A[3] = function(icon, isMulti)
                 return A.FlankingStrike:Show(icon)
             end
 
-            --actions.cleave+=/butchery,if=(!next_wi_bomb.shrapnel|!talent.wildfire_infusion)&cooldown.wildfire_bomb.full_recharge_time>spell_targets%2
-            if A.Butchery:IsReady(player) and (not A.ShrapnelBomb:IsTalentLearned() or not A.WildfireInfusion:IsTalentLearned()) and A.WildfireBomb:GetSpellChargesFullRechargeTime() > (A.MultiUnits:GetByRangeInCombat(10, 5) % 2) then
+            --actions.cleave+=/butchery,if=(!next_wi_bomb.shrapnel|!talent.wildfire_infusion)
+            if A.Butchery:IsReady(player) and (not A.ShrapnelBomb:IsTalentLearned() or not A.WildfireInfusion:IsTalentLearned()) then
                 return A.Butchery:Show(icon)
             end
 
@@ -585,7 +604,7 @@ A[3] = function(icon, isMulti)
             end
 
             --actions.cleave+=/kill_command,cycle_targets=1,if=full_recharge_time<gcd
-            if A.KillCommand:IsReady(unitID) and A.KillCommand:GetSpellChargesFullRechargeTime() < A.GetGCD() and Unit(pet):IsExists() and Unit(pet):InCC() == 0 then
+            if A.KillCommand:IsReady(unitID) and Unit(pet):IsExists() and Unit(pet):InCC() == 0 and A.KillCommand:GetSpellChargesFullRechargeTime() < A.GetGCD() and Unit(pet):IsExists() and Unit(pet):InCC() == 0 then
                 return A.KillCommand:Show(icon)
             end
 
@@ -594,14 +613,24 @@ A[3] = function(icon, isMulti)
                 return A.Carve:Show(icon)
             end
 
-            --actions.cleave+=/kill_shot
-            if A.KillShot:IsReady(unitID) then
+            --actions.cleave+=/kill_shot,if=!buff.coordinated_assault.up
+            if A.KillShot:IsReady(unitID) and not CoordinatedAssaultUp then
                 return A.KillShot:Show(icon)
             end
 
             --actions.cleave+=/steel_trap
             if A.SteelTrap:IsReady(player) and A.ArcaneShot:IsInRange(unitID) then
                 return A.SteelTrap:Show(icon)
+            end
+
+            --actions.cleave+=/spearhead
+            if A.Spearhead:IsReady(unitID) then
+                return A.Spearhead:Show(icon)
+            end
+
+            --actions.cleave+=/mongoose_bite,target_if=min:dot.serpent_sting.remains,if=buff.spearhead.remains
+            if A.MongooseBite:IsReady(unitID) and Unit(unitID):HasDeBuffs(A.SerpentSting.ID, true) > 0 and SpearheadUp then
+                return A.MongooseBite:Show(icon)
             end
 
             --actions.cleave+=/serpent_sting,cycle_targets=1,if=refreshable&target.time_to_die>12&(!talent.vipers_venom|talent.hydras_bite)
@@ -619,13 +648,23 @@ A[3] = function(icon, isMulti)
             end
         end
 
-        --actions.st+=/death_chakram
-        if A.DeathChakram:IsReady(unitID) then
+        --actions.st=kill_command,target_if=min:bloodseeker.remains,if=talent.spearhead&debuff.shredded_armor.stack<1&cooldown.spearhead.remains<2*gcd
+        if A.KillCommand:IsReady(unitID) and Unit(pet):IsExists() and Unit(pet):InCC() == 0 and A.Spearhead:IsTalentLearned() and Unit(unitID):HasDeBuffs(A.ShreddedArmor.ID, true) == 0 and A.Spearhead:GetCooldown() < A.GetGCD() * 2 then
+            return A.KillCommand:Show(icon)
+        end
+
+        --actions.st+=/wildfire_bomb,if=talent.spearhead&cooldown.spearhead.remains<2*gcd&debuff.shredded_armor.stack>0        
+        if A.WildfireBomb:IsReady(unitID) and A.Spearhead:IsTalentLearned() and A.Spearhead:GetCooldown() < A.GetGCD() * 2 and Unit(unitID):HasDeBuffsStacks(A.ShreddedArmor.ID, true) > 0 then
+            return A.WildfireBomb:Show(icon)
+        end
+
+        --actions.st+=/death_chakram,if=focus+cast_regen<focus.max|talent.spearhead&!cooldown.spearhead.remains
+        if A.DeathChakram:IsReady(unitID) and ((Player:Focus() + 21) < Player:FocusMax() or (A.Spearhead:IsTalentLearned() and A.Spearhead:GetCooldown() == 0)) then
             return A.DeathChakram:Show(icon)
         end
 
-        --actions.st+=/spearhead,if=cooldown.death_chakram.remains|!talent.death_chakram
-        if A.Spearhead:IsReady(unitID) and (A.DeathChakram:GetCooldown() > 0 or not A.DeathChakram:IsTalentLearned()) then
+        --actions.st+=/spearhead,if=focus+action.kill_command.cast_regen>focus.max-10&(cooldown.death_chakram.remains|!talent.death_chakram)
+        if A.Spearhead:IsReady(unitID) and (Player:Focus() + 21) > Player:FocusMax() - 10 and (A.DeathChakram:GetCooldown() > 0 or not A.DeathChakram:IsTalentLearned()) then
             return A.Spearhead:Show(icon)
         end
 
@@ -634,8 +673,18 @@ A[3] = function(icon, isMulti)
             return A.KillShot:Show(icon)
         end
 
-        --actions.st+=/kill_command,cycle_targets=1,if=full_recharge_time<gcd&buff.deadly_duo.stack>1
-        if A.KillCommand:IsReady(unitID) and A.KillCommand:GetSpellChargesFullRechargeTime() < A.GetGCD() and Unit(player):HasBuffsStacks(A.DeadlyDuoBuff.ID) > 1 and Unit(pet):IsExists() and Unit(pet):InCC() == 0 then
+        --actions.st+=/wildfire_bomb,if=debuff.shredded_armor.stack>0&(full_recharge_time<2*gcd|talent.bombardier&!cooldown.coordinated_assault.remains|talent.bombardier&buff.coordinated_assault.up&buff.coordinated_assault.remains<2*gcd)&set_bonus.tier30_4pc
+        if A.WildfireBomb:IsReady(unitID) and Unit(unitID):HasDeBuffsStacks(A.ShreddedArmor.ID, true) > 0 and (A.WildfireBomb:GetSpellChargesFullRechargeTime() < A.GetGCD() * 2 or A.Bombardier:IsTalentLearned() and A.CoordinatedAssault:GetCooldown() == 0 or A.Bombardier:IsTalentLearned() and CoordinatedAssaultUp and Unit(player):HasBuffs(A.CoordinatedAssault.ID) < A.GetGCD() * 2) and T30has4P then
+            return A.WildfireBomb:Show(icon)
+        end
+
+        --actions.st+=/kill_command,target_if=min:bloodseeker.remains,if=full_recharge_time<gcd&focus+cast_regen<focus.max&(buff.deadly_duo.stack>2|buff.spearhead.remains&dot.pheromone_bomb.remains)
+        if A.KillCommand:IsReady(unitID) and Unit(pet):IsExists() and Unit(pet):InCC() == 0 and A.KillCommand:GetSpellChargesFullRechargeTime() < A.GetGCD() and Player:Focus() + 21 < Player:FocusMax() and (Unit(player):HasBuffsStacks(A.DeadlyDuoBuff.ID) > 2 or SpearheadUp and Unit(unitID):HasDeBuffs(A.PheromoneBombDebuff.ID) > 0) then
+            return A.KillCommand:Show(icon)
+        end
+        
+        --actions.st+=/kill_command,target_if=min:bloodseeker.remains,if=cooldown.wildfire_bomb.full_recharge_time<3*gcd&debuff.shredded_armor.stack<1&set_bonus.tier30_4pc&!buff.spearhead.remains
+        if A.KillCommand:IsReady(unitID) and Unit(pet):IsExists() and Unit(pet):InCC() == 0 and A.WildfireBomb:GetSpellChargesFullRechargeTime() < 3 * A.GetGCD() and Unit(unitID):HasDeBuffs(A.ShreddedArmor.ID, true) == 0 and T30has4P and not SpearheadUp then
             return A.KillCommand:Show(icon)
         end
 
@@ -645,26 +694,43 @@ A[3] = function(icon, isMulti)
         end
 
         --actions.st+=/mongoose_bite,if=active_enemies=1&target.time_to_die<focus%(variable.mb_rs_cost-cast_regen)*gcd|buff.mongoose_fury.up&buff.mongoose_fury.remains<gcd
-        if A.MongooseBite:IsReady(unitID) and Unit(player):HasBuffs(A.MongooseFury.ID) > 0 and Unit(player):HasBuffs(A.MongooseFury.ID) < A.GetGCD() then
+        if A.MongooseBite:IsReady(unitID) and (A.MultiUnits:GetByRangeInCombat(10, 5) == 1 and Unit(unitID):TimeToDie() < Player:Focus() % (mb_rs_cost) * A.GetGCD() or Unit(player):HasBuffs(A.MongooseFury.ID) > 0 and Unit(player):HasBuffs(A.MongooseFury.ID) < A.GetGCD()) then
             return A.MongooseBite:Show(icon)
         end
 
-        --actions.st+=/kill_shot
-        if A.KillShot:IsReady(unitID) then
+        --actions.st+=/kill_shot,if=!buff.coordinated_assault.up
+        if A.KillShot:IsReady(unitID) and not CoordinatedAssaultUp then
             return A.KillShot:Show(icon)
         end
 
         --actions.st+=/raptor_strike,if=active_enemies=1&target.time_to_die<focus%(variable.mb_rs_cost-cast_regen)*gcd
+        if A.RaptorStrike:IsReady(unitID) and A.MultiUnits:GetByRangeInCombat(10, 5) == 1 and Unit(unitID):TimeToDie() < Player:Focus() % (mb_rs_cost) * A.GetGCD() then
+            return A.RaptorStrike:Show(icon)
+        end
 
         --actions.st+=/serpent_sting,cycle_targets=1,if=!dot.serpent_sting.ticking&target.time_to_die>7&!talent.vipers_venom
         if A.SerpentSting:IsReady(unitID) and Unit(unitID):HasDeBuffs(A.SerpentSting.ID, true) == 0 and Unit(unitID):TimeToDie() > 7 and not A.VipersVenom:IsTalentLearned() then
             return A.SerpentSting:Show(icon)
         end
 
-        --actions.st+=/mongoose_bite,if=talent.alpha_predator&buff.mongoose_fury.up&buff.mongoose_fury.remains<focus%(variable.mb_rs_cost-cast_regen)*gcd
-        --actions.st+=/flanking_strike
-        if A.FlankingStrike:IsReady(unitID) then
+        --actions.st+=/fury_of_the_eagle,if=buff.seething_rage.up&buff.seething_rage.remains<3*gcd&(!raid_event.adds.exists|active_enemies>1|raid_event.adds.exists&raid_event.adds.in>40)
+        if A.FuryoftheEagle:IsReady(player) and InMelee(unitID) and Unit(player):HasBuffs(A.SeethingRage.ID) > 0 and Unit(player):HasBuffs(A.SeethingRage.ID) < 3 * A.GetGCD() then
+            return A.FuryoftheEagle:Show(icon)
+        end
+
+        --actions.st+=/mongoose_bite,if=talent.alpha_predator&buff.mongoose_fury.up&buff.mongoose_fury.remains<focus%(variable.mb_rs_cost-cast_regen)*gcd|buff.seething_rage.remains&active_enemies=1
+        if A.MongooseBite:IsReady(unitID) and (A.AlphaPredator:IsTalentLearned() and Unit(player):HasBuffs(A.MongooseFury.ID) > 0 and Unit(player):HasBuffs(A.MongooseFury.ID) < Player:Focus() % mb_rs_cost * A.GetGCD() or Unit(player):HasBuffs(A.SeethingRage.ID) > 0 and A.MultiUnits:GetByRangeInCombat(10, 5) == 1) then
+            return A.MongooseBite:Show(icon)
+        end
+
+        --actions.st+=/flanking_strike,if=focus+cast_regen<focus.max
+        if A.FlankingStrike:IsReady(unitID) and Player:Focus() + 30 < Player:FocusMax() then
             return A.FlankingStrike:Show(icon)
+        end
+
+        --actions.st+=/stampede
+        if A.Stampede:IsReady(player) and InMelee(unitID) then
+            return A.Stampede:Show(icon)
         end
 
         --actions.st+=/coordinated_assault,if=!talent.coordinated_kill&target.health.pct<20&(!buff.spearhead.remains&cooldown.spearhead.remains|!talent.spearhead)|talent.coordinated_kill&(!buff.spearhead.remains&cooldown.spearhead.remains|!talent.spearhead)
@@ -672,19 +738,9 @@ A[3] = function(icon, isMulti)
             return A.Stoneform:Show(icon)
         end
 
-        --actions.st+=/wildfire_bomb,if=next_wi_bomb.pheromone&!buff.mongoose_fury.up
-        if A.WildfireBomb:IsReady(unitID) and A.PheromoneBomb:IsTalentLearned() and Unit(player):HasBuffs(A.MongooseFury.ID) == 0 then
-            return A.WildfireBombDebuff:Show(icon)
-        end
-
-        --actions.st+=/kill_command,cycle_targets=1,if=full_recharge_time<gcd
-        if A.KillCommand:IsReady(unitID) and A.KillCommand:GetSpellChargesFullRechargeTime() < A.GetGCD() and Unit(pet):IsExists() and Unit(pet):InCC() == 0 then
+        --actions.st+=/kill_command,target_if=min:bloodseeker.remains,if=full_recharge_time<gcd&focus+cast_regen<focus.max&(cooldown.flanking_strike.remains|!talent.flanking_strike)
+        if A.KillCommand:IsReady(unitID) and Unit(pet):IsExists() and Unit(pet):InCC() == 0 and A.KillCommand:GetSpellChargesFullRechargeTime() <  A.GetGCD() and Player:Focus() + 21 < Player:FocusMax() and (A.FlankingStrike:GetCooldown() > 0 or not A.FlankingStrike:IsTalentLearned()) then
             return A.KillCommand:Show(icon)
-        end
-
-        --actions.st+=/mongoose_bite,if=dot.shrapnel_bomb.ticking
-        if A.MongooseBite:IsReady(unitID) and Unit(unitID):HasDeBuffs(A.ShrapnelBombDebuff.ID, true) > 0 then
-            return A.MongooseBite:Show(icon)
         end
 
         --actions.st+=/serpent_sting,cycle_targets=1,if=refreshable&!talent.vipers_venom
@@ -692,9 +748,19 @@ A[3] = function(icon, isMulti)
             return A.SerpentSting:Show(icon)
         end
 
-        --actions.st+=/wildfire_bomb,if=full_recharge_time<gcd&!set_bonus.tier29_2pc
-        if A.WildfireBomb:IsReady(unitID) and A.WildfireBomb:GetSpellChargesFullRechargeTime() < A.GetGCD() then
-            return A.WildfireBombDebuff:Show(icon)
+        --actions.st+=/wildfire_bomb,if=raid_event.adds.in>cooldown.wildfire_bomb.full_recharge_time-(cooldown.wildfire_bomb.full_recharge_time%3.5)&full_recharge_time<2*gcd
+        if A.WildfireBomb:IsReady(unitID) and A.WildfireBomb:GetSpellChargesFullRechargeTime() < A.GetGCD() * 2 then
+            return A.WildfireBomb:Show(icon)
+        end
+
+        --actions.st+=/mongoose_bite,if=dot.shrapnel_bomb.ticking
+        if A.MongooseBite:IsReady(unitID) and Unit(unitID):HasDeBuffs(A.ShrapnelBombDebuff.ID, true) > 0 then
+            return A.MongooseBite:Show(icon)
+        end
+
+        --actions.st+=/wildfire_bomb,if=raid_event.adds.in>cooldown.wildfire_bomb.full_recharge_time-(cooldown.wildfire_bomb.full_recharge_time%3.5)&set_bonus.tier30_4pc&(!dot.wildfire_bomb.ticking&debuff.shredded_armor.stack>0&focus+cast_regen<focus.max|active_enemies>1)
+        if A.WildfireBomb:IsReady(unitID) and T30has4P and (Unit(unitID):HasDeBuffs(A.WildfireBombDebuff.ID) == 0 and Unit(unitID):HasDeBuffsStacks(A.ShreddedArmor.ID, true) > 0 and Player:Focus() + (10*val(CoordinatedAssaultUp)) < Player:FocusMax() or A.MultiUnits:GetByRangeInCombat(10, 5) > 1) then
+            return A.WildfireBomb:Show(icon)
         end
 
         --actions.st+=/mongoose_bite,cycle_targets=1,if=buff.mongoose_fury.up
@@ -706,18 +772,18 @@ A[3] = function(icon, isMulti)
         if A.ExplosiveShot:IsReady(unitID) and A.Ranger:IsTalentLearned() then
             return A.ExplosiveShot:Show(icon)
         end
-        
-        --actions.st+=/mongoose_bite,cycle_targets=1
-        if A.MongooseBite:IsReady(unitID) then
+
+        --actions.st+=/fury_of_the_eagle,if=(!equipped.djaruun_pillar_of_the_elder_flame|cooldown.elder_flame_408821.remains>40)&target.health.pct<65&talent.ruthless_marauder&(!raid_event.adds.exists|raid_event.adds.exists&raid_event.adds.in>40)
+        if A.FuryoftheEagle:IsReady(unitID) and Unit(unitID):HealthPercent() < 65 and A.RuthlessMarauder:IsTalentLearned() then
+            return A.FuryoftheEagle:Show(icon)
+        end
+
+        --actions.st+=/mongoose_bite,target_if=max:debuff.latent_poison.stack,if=focus+action.kill_command.cast_regen>focus.max-10|set_bonus.tier30_4pc
+        if A.MongooseBite:IsReady(unitID) and (Player:Focus() + 21 > (Player:FocusMax() - 10) or T30has4P) then
             return A.MongooseBite:Show(icon)
         end
 
-        --actions.st+=/stampede
-        if A.Stampede:IsReady(player) and InMelee(unitID) then
-            return A.Stampede:Show(icon)
-        end
-
-        --actions.st+=/raptor_strike,cycle_targets=1
+        --actions.st+=/raptor_strike,target_if=max:debuff.latent_poison.stack
         if A.RaptorStrike:IsReady(unitID) then
             return A.RaptorStrike:Show(icon)
         end
@@ -726,14 +792,17 @@ A[3] = function(icon, isMulti)
         if A.SteelTrap:IsReady(player) and A.ArcaneShot:IsInRange(unitID) then
             return A.SteelTrap:Show(icon)
         end
+
         --actions.st+=/wildfire_bomb,if=!dot.wildfire_bomb.ticking
         if A.WildfireBomb:IsReady(unitID) and Unit(unitID):HasDeBuffs(A.WildfireBombDebuff.ID, true) == 0 then
             return A.WildfireBombDebuff:Show(icon)
         end
+
         --actions.st+=/kill_command,cycle_targets=1
         if A.KillCommand:IsReady(unitID) and Unit(pet):IsExists() and Unit(pet):InCC() == 0 then
             return A.KillCommand:Show(icon)
         end
+
         --actions.st+=/coordinated_assault,if=!talent.coordinated_kill&time_to_die>140
         if A.CoordinatedAssault:IsReady(unitID) and BurstIsON(unitID) and not A.CoordinatedKill:IsTalentLearned() and Unit(unitID):TimeToDie() > 140 then
             return A.Stoneform:Show(icon)

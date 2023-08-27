@@ -235,15 +235,95 @@ local Temp = {
     DisablePhys                             = {"TotalImun", "DamagePhysImun", "Freedom", "CCTotalImun"},
     DisableMag                              = {"TotalImun", "DamageMagicImun", "Freedom", "CCTotalImun"},
     FelRushDelay                            = 0,
-    scaryCasts                              = { 396023, --Incinerating Roar
-                                                376279, --Concussive Slam
-                                                388290, --Cyclone
-                                                375457, --Chilling Tantrum
+    incomingAoEDamage                       = { 372735, -- Tectonic Slam (RLP)
+                                                385536, -- Flame Dance (RLP)
+                                                392488, -- Lightning Storm (RLP)
+                                                392486, -- Lightning Storm (RLP)
+                                                372863, -- Ritual of Blazebinding (RLP)
+                                                373680, 373688, -- Frost Overload (RLP)
+                                                374720, -- Consuming Stomp (AV)
+                                                384132, -- Overwhelming Energy (AV)
+                                                388804, -- Unleashed Destruction (AV)
+                                                388817, -- Shards of Stone (NO)
+                                                387135, -- Arcing Strike (NO)
+                                                387145, -- Totemic Overload (NO)
+                                                386012, -- Stormbolt (NO)
+                                                386025, -- Tempest (NO)
+                                                384620, -- Electrical Storm (NO)
+                                                387411, -- Death Bolt Volley (NO)
+                                                387145, -- Totemic Overload (NO)
+                                                377004, -- Deafening Screech (AA)
+                                                388537, -- Arcane Fissue (AA)
+                                                388923, -- Burst Forth (AA)
+                                                212784, -- Eye Storm (CoS)
+                                                211406, -- Firebolt (CoS)
+                                                207906, -- Burning Intensity (CoS)
+                                                207881, -- Infernal Eruption (CoS)
+                                                397892, -- Scream of Pain (CoS)
+                                                153094, -- Whispers of the Dark Star (SBG)
+                                                164974, -- Dark Eclipse (SBG)
+                                                192305, -- Eye of the Storm (mini-boss)
+                                                200901, -- Eye of the Storm (boss)
+                                                153804, -- Inhale
+                                                175988, -- Omen of Death
+                                                106228, -- Nothingness
+                                                388008, -- Absolute Zero
+                                                191284, -- Horn of Valor (HoV)
+                                                241687, -- Sonic Scream (DPS Mage Tower)
+                                                188114, -- Shatter (NL)
+                                                413387, -- Crashing Stone (VP)
+                                                374586, -- Might of the Forge (N)
+                                                381694, -- Decayed Senses (BH)
+                                                376170, -- Choking Rotcloud (BH)
+                                                389179, -- Power Overload (HoI)
+                                                389443, -- Purifying Blast (HoI)
+                                                387559, -- Infused Globules (HoI)
+                                                382303, -- Quaking Totem (Ulda)
+                                                369061, -- Searing Clap (Ulda)
+                                                377017, -- Molten Gold (Neltharus)
+                                                88194, -- Icy Buffet (VP)
+                                                411002, -- Turbulence (VP)
+                                                384623, -- Forgestomp (N)
+                                                384663, -- Forgewrought Fury (N)
+                                                374365, -- Volatile Mutation (N)
+                                                391634, -- Deep Chill (HoI)
+                                                388882, -- Inundate (HoI)
+                                                388424, -- Tempest's Fury (HoI)
+                                                381593, -- Thunderous Clap (Ulda)
+
+    },
+    useDefensiveDebuff                      = { 378229, --Marked for Butchery (BH)
+                                                367484, --Vicious Clawmangle (BH)
+                                                367521, --Bone Bolt (BH)
+                                                384974, --Scented Meat (BH)
+                                                384425, --Smells Like Meat (BH)
+                                                265016, --Blood Harvest (Underrot)
+                                                265568, --Dark Omen (Underrot)
+                                                257739, --Blind Rage (Freehold)
+                                                183539, --Barbed Tongue (Neltharion)
+                                                200154, --Burning Hatred (Neltharion)
+                                                372225, --Dragonbone Axe (Neltharion)
+                                                378818, --Magma Conflagration (Neltharion)
+                                                374073, --Seismic Slam (Halls of Infusion)
+                                                374724, --Molten Subduction (Halls of Infusion)
+                                                385832, --Bloodthirsty Charge (Brackenhide Hollow)
+                                                368287, --Toxic Trap (Brackenhide Hollow)
+                                                388060, --Stink Breath (Brackenhide Hollow)
+                                                266107, --Thirst for Blood (Underrot)
+                                                377522, --Burning Pursuit (N)
+                                                369328, --Earthquake (Uldaman)
+                                                377864, -- Infectious Spit (BH)
+                                                374389, -- Gulp Swong Toxin (HoI)
+                                                374812, -- Blazing Aegis (Neltharus)
+                                                374842, -- Blazing Aegis (Neltharus)
+    },
+    blockMovementDebuff                     = {
+
     },
 }
 
 local function InMelee(unitID)
-    return A.SoulCleave:IsInRange(unitID)
+    return A.ChaosStrike:IsInRange(unitID)
 end 
 InMelee = A.MakeFunctionCachedDynamic(InMelee)
 
@@ -258,7 +338,7 @@ local function SelfDefensives()
     end  
 
     local blurHP = A.GetToggle(2, "blurHP")
-    if A.Blur:IsReady(player) and Unit(player):HealthPercent() <= blurHP then
+    if A.Blur:IsReady(player) and (Unit(player):HealthPercent() <= blurHP or MultiUnits:GetByRangeCasting(60, 1, nil, Temp.incomingAoEDamage) >= 1 or Unit(player):HasDeBuffs(Temp.useDefensiveDebuff) > 1) then
         return A.Blur
     end
 
@@ -283,12 +363,12 @@ local function Interrupts(unitID)
         end  
         
         -- Sigil of Misery (Disorient)
-        if useCC and A.SigilofMisery:IsReady(player) and not Player:IsMoving() and A.SigilofMisery:AbsentImun(unitID, Temp.TotalAndCC, true) and not Unit(unitID):IsBoss() and castRemainsTime > (2 + A.GetLatency()) then 
+        if useCC and A.SigilofMisery:IsReady(player) and ((Unit(unitID):GetRange() <= 7 and not Player:IsMoving() and not A.PreciseSigils:IsTalentLearned()) or A.PreciseSigils:IsTalentLearned()) and A.SigilofMisery:AbsentImun(unitID, Temp.TotalAndCC, true) and not Unit(unitID):IsBoss() and castRemainsTime > (2 + A.GetLatency()) then 
             return A.SigilofMisery              
         end 
         
         -- Sigil of Silence (Silence)
-        if useKick and not A.Disrupt:IsReady(unitID) and A.SigilofSilence:IsReady(player) and not Player:IsMoving() and A.SigilofSilence:AbsentImun(unitID, Temp.TotalAndCC, true) and not Unit(unitID):IsBoss() and castRemainsTime > (2 + A.GetLatency()) then 
+        if useKick and not A.Disrupt:IsReady(unitID) and A.SigilofSilence:IsReady(player) and ((Unit(unitID):GetRange() <= 7 and not Player:IsMoving() and not A.PreciseSigils:IsTalentLearned()) or A.PreciseSigils:IsTalentLearned()) and A.SigilofSilence:AbsentImun(unitID, Temp.TotalAndCC, true) and not Unit(unitID):IsBoss() and castRemainsTime > (2 + A.GetLatency()) then 
             return A.SigilofSilence              
         end 
         
@@ -375,14 +455,68 @@ local function DarknessCheck()
 
 end
 
+local function shouldBurst(unitID)
+    -- Adjust these values based on what you consider appropriate
+    local singleTargetTTDThreshold = 20
+    local areaTTDThreshold = 20
+
+    -- Check the TTD of the current target
+    if Unit(unitID):TimeToDie() > singleTargetTTDThreshold then
+        return true
+    end
+
+    -- Check the combined TTD for enemies in the area
+    if MultiUnits.GetByRangeAreaTTD(20) > areaTTDThreshold then
+        return true
+    end
+
+    if Unit(unitID):IsBoss() then
+        return true
+    end
+
+    return false
+end
+
+function ThreeMinuteTrinketCheck()
+    -- Get the IDs for the trinkets in slot 13 and 14
+    local trinket1ID = GetInventoryItemID("player", 13)
+    local trinket2ID = GetInventoryItemID("player", 14)
+    
+    -- Check the cooldown for trinket 1
+    if trinket1ID then
+        local _, trinket1Duration, _ = GetItemCooldown(trinket1ID)
+        if trinket1Duration == 180 then
+            return true
+        end
+    end
+    
+    -- Check the cooldown for trinket 2
+    if trinket2ID then
+        local _, trinket2Duration, _ = GetItemCooldown(trinket2ID)
+        if trinket2Duration == 180 then
+            return true
+        end
+    end
+    
+    -- If neither trinket has a 3-minute cooldown, return false
+    return false
+end
+
+
 
 A[3] = function(icon, isMulti)
+    unitID = "target"
+
     local isMoving = A.Player:IsMoving()
     local inCombat = Unit(player):CombatTime() > 0
 	local combatTime = Unit(player):CombatTime()
     local ShouldStop = Action.ShouldStop()
-    local T29has2P = Player:HasTier("Tier29", 2)
-    local T29has4P = Player:HasTier("Tier29", 4)
+    Player:AddTier("Tier30", { 202524, 202525, 202527, 202523, 202522, })
+    local T30has2P = Player:HasTier("Tier30", 2)
+    local T30has4P = Player:HasTier("Tier30", 4)
+    local useBurst = BurstIsON(unitID) and shouldBurst(unitID) and InMelee()
+    local threeMinuteTrinket = ThreeMinuteTrinketCheck()
+    local fightRemains = MultiUnits.GetByRangeAreaTTD(20)
 
 
     local function DamageRotation(unitID)
@@ -390,8 +524,12 @@ A[3] = function(icon, isMulti)
         local furyDeficit = Player:FuryDeficit()
         local fury = Player:Fury()
         local spellTargets = MultiUnits:GetByRange(10, 5)
+        local activeEnemies = MultiUnits:GetByRange(10, 5)
+        if Unit(target):IsEnemy() and Unit(unitID):GetRange() <= 15 and activeEnemies == 0 then
+            activeEnemies = 1
+        end
+        local desiredTargets = activeEnemies
         local useMovement = A.GetToggle(2, "useMovement")
-
 
         if Temp.FelRushDelay == 0 and Unit(player):IsCasting() == A.FelRush:Info() then
             Temp.FelRushDelay = 90
@@ -399,8 +537,12 @@ A[3] = function(icon, isMulti)
             Temp.FelRushDelay = Temp.FelRushDelay - 1
         end
 
-        if Player:PrevOffGCD(1, A.VengefulRetreat) and A.Felblade:IsReady(unitID, nil, nil, true) then
-            return A.Felblade:Show(icon)
+        local isBackflip = false
+        if Player:PrevOffGCD(1, A.VengefulRetreat) then
+            isBackflip = true
+        end
+        if A.VengefulRetreat:GetSpellTimeSinceLastCast() > 2 then
+            isBackflip = false
         end
 
         -- Defensive
@@ -417,9 +559,11 @@ A[3] = function(icon, isMulti)
 
         local useBladeDance = A.FirstBlood:IsTalentLearned() or A.TrailofRuin:IsTalentLearned() or A.ChaosTheory:IsTalentLearned() and Unit(player):HasBuffs(A.ChaosTheoryBuff.ID) == 0 or spellTargets > 1
         local poolingForBladeDance = useBladeDance and fury < (75 - (num(A.DemonBlades:IsTalentLearned())*20)) and A.BladeDance:GetCooldown() < A.GetGCD()
-        local poolingForEyeBeam = A.Demonic:IsTalentLearned() and not A.BlindFury:IsTalentLearned() and A.EyeBeam:GetCooldown() < (A.GetGCD() * 2) and furyDeficit > 20
+        local poolingForEyeBeam = A.Demonic:IsTalentLearned() and not A.BlindFury:IsTalentLearned() and A.EyeBeam:GetCooldown() < (A.GetGCD() * 2) and fury < 60
         local waitingForMomentum = A.Momentum:IsTalentLearned() and Unit(player):HasBuffs(A.MomentumBuff.ID) == 0
-        
+        local holdingMeta = (A.Demonic:IsTalentLearned() and A.EssenceBreak:IsTalentLearned()) and threeMinuteTrinket and fightRemains > (A.Metamorphosis:GetCooldown() + 30 + num(A.ShatteredDestiny:IsTalentLearned()) * 60) and A.Metamorphosis:GetCooldown() < 20 and A.Metamorphosis:GetCooldown() > (A.EyeBeam:GetSpellCastTime() + GetGCD() * (num(A.InnerDemon:IsTalentLearned()) + 2))
+
+
         -- Interrupts
         local Interrupt = Interrupts(unitID)
         if Interrupt then 
@@ -435,11 +579,11 @@ A[3] = function(icon, isMulti)
         local function Cooldowns()
             -- # Cast Metamorphosis if we will get a full Eye Beam refresh or if the encounter is almost over
             -- actions.cooldown=metamorphosis,if=!talent.demonic&((!talent.chaotic_transformation|cooldown.eye_beam.remains>20)&active_enemies>desired_targets|raid_event.adds.in>60|fight_remains<25)
-            if A.Metamorphosis:IsReady(player) and not A.Demonic:IsTalentLearned() and ((not A.ChaoticTransformation:IsTalentLearned() or A.EyeBeam:GetCooldown() > 20) and spellTargets >= 1) then
+            if A.Metamorphosis:IsReady(player) and not A.Demonic:IsTalentLearned() and ((not A.ChaoticTransformation:IsTalentLearned() or A.EyeBeam:GetCooldown() > 20) and spellTargets >= desiredTargets or Unit(unitID):IsBoss()) then
                 return A.Metamorphosis
             end
             -- actions.cooldown+=/metamorphosis,if=talent.demonic&(!talent.chaotic_transformation|cooldown.eye_beam.remains>20&(!variable.blade_dance|cooldown.blade_dance.remains>gcd.max)|fight_remains<25)
-            if A.Metamorphosis:IsReady(player) and A.Demonic:IsTalentLearned() and (not A.ChaoticTransformation:IsTalentLearned() or A.EyeBeam:GetCooldown() > 20 and (not useBladeDance or A.BladeDance:GetCooldown() > A.GetGCD())) then
+            if A.Metamorphosis:IsReady(player) and A.Demonic:IsTalentLearned() and (not A.ChaoticTransformation:IsTalentLearned() or A.EyeBeam:GetCooldown() > 20 and (not useBladeDance or A.BladeDance:GetCooldown() > A.GetGCD()) or fightRemains < 25 and Unit(unitID):IsBoss()) then
                 return A.Metamorphosis
             end
             -- actions.cooldown+=/potion,if=buff.metamorphosis.remains>25|buff.metamorphosis.up&cooldown.metamorphosis.ready|fight_remains<60
@@ -449,15 +593,30 @@ A[3] = function(icon, isMulti)
                 return A.TheHunt
             end
             -- actions.cooldown+=/elysian_decree,if=(active_enemies>desired_targets|raid_event.adds.in>30)
-            if A.ElysianDecree:IsReady(player) and (spellTargets >= 1) then
+            if A.ElysianDecree:IsReady(player) and (spellTargets >= desiredTargets or Unit(unitID):IsBoss()) then
                 return A.ElysianDecree
             end
         end
 
+        -- actions+=/immolation_aura,if=talent.ragefire&active_enemies>=3&(cooldown.blade_dance.remains|debuff.essence_break.down)
+        if A.ImmolationAura:IsReady(player) and A.Ragefire:IsTalentLearned() and activeEnemies >= 3 and (A.BladeDance:GetCooldown() > 0 or Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0) then
+            return A.ImmolationAura:Show(icon)
+        end
+
+        -- actions+=/throw_glaive,if=talent.serrated_glaive&(buff.metamorphosis.remains>gcd.max*6&(debuff.serrated_glaive.down|debuff.serrated_glaive.remains<cooldown.essence_break.remains+5&cooldown.essence_break.remains<gcd.max*2)&(cooldown.blade_dance.remains|cooldown.essence_break.remains<gcd.max*2)|time<0.5)&debuff.essence_break.down&target.time_to_die>gcd.max*8
+        if A.ThrowGlaive:IsReady(unitID) and A.SerratedGlaive:IsTalentLearned() and (Unit(player):HasBuffs(A.Metamorphosis.ID) > A.GetGCD() * 6 and (Unit(unitID):HasDeBuffs(A.SerratedGlaive.ID) == 0 or Unit(unitID):HasDeBuffs(A.SerratedGlaive.ID) < (A.EssenceBreak:GetCooldown() + 5) and A.EssenceBreak:GetCooldown() < A.GetGCD() * 2) and (A.BladeDance:GetCooldown() > 0 or A.EssenceBreak:GetCooldown() < A.GetGCD() * 2) or combatTime < 0.5) and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and Unit(unitID):TimeToDie() > A.GetGCD() * 8 then
+            return A.ThrowGlaive:Show(icon)
+        end
+
+        -- actions+=/throw_glaive,if=talent.serrated_glaive&cooldown.eye_beam.remains<gcd.max*2&debuff.serrated_glaive.remains<(2+buff.metamorphosis.down*6)&(cooldown.blade_dance.remains|buff.metamorphosis.down)&debuff.essence_break.down&target.time_to_die>gcd.max*8
+        if A.ThrowGlaive:IsReady(player) and A.SerratedGlaive:IsTalentLearned() and A.EyeBeam:GetCooldown() < A.GetGCD() * 2 and Unit(unitID):HasDeBuffs(A.SerratedGlaive.ID) < (2 + num(Unit(player):HasBuffs(A.Metamorphosis.ID) == 0) * 6) and (A.BladeDance:GetCooldown() > 0 or Unit(player):HasBuffs(A.Metamorphosis.ID) == 0) and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and Unit(unitID):TimeToDie() > A.GetGCD() * 8 then
+            return A.ThrowGlaive:Show(icon)
+        end
+
         -- actions+=/call_action_list,name=cooldown,if=gcd.remains=0
-        local useCooldowns = Cooldowns()
+        local useCooldowns = Cooldowns() 
         local useTrinket = UseTrinkets(unitID)
-        if BurstIsON(unitID) and (Unit(unitID):TimeToDie() > 10 or Unit(unitID):IsBoss()) then
+        if useBurst then
             if useTrinket then
                 return useTrinket:Show(icon)
             end
@@ -465,7 +624,157 @@ A[3] = function(icon, isMulti)
                 return useCooldowns:Show(icon)
             end
         end
-        -- actions+=/vengeful_retreat,use_off_gcd=1,if=talent.initiative&talent.essence_break&time>1&(cooldown.essence_break.remains>15|cooldown.essence_break.remains<gcd.max&(!talent.demonic|buff.metamorphosis.up|cooldown.eye_beam.remains>15+(10*talent.cycle_of_hatred)))
+
+        -- actions+=/annihilation,if=buff.inner_demon.up&cooldown.metamorphosis.remains<=gcd*3
+        if A.ChaosStrike:IsReady(unitID) and Unit(player):HasBuffs(A.InnerDemon.ID) > 0 and A.Metamorphosis:GetCooldown() <= GetGCD() * 3 then
+            return A.ChaosStrike:Show(icon)
+        end
+
+        -- actions+=/vengeful_retreat,use_off_gcd=1,if=talent.initiative&talent.essence_break&time>1&(cooldown.essence_break.remains>15|cooldown.essence_break.remains<gcd.max&(!talent.demonic|buff.metamorphosis.up|cooldown.eye_beam.remains>15+(10*talent.cycle_of_hatred)))&(time<30|gcd.remains-1<0)&!talent.any_means_necessary&(!talent.initiative|buff.initiative.remains<gcd.max|time>4)
+        -- actions+=/vengeful_retreat,use_off_gcd=1,if=talent.initiative&talent.essence_break&time>1&(cooldown.essence_break.remains>15|cooldown.essence_break.remains<gcd.max*2&(buff.initiative.remains<gcd.max&!variable.holding_meta&cooldown.eye_beam.remains=gcd.remains&(raid_event.adds.in>(40-talent.cycle_of_hatred*15))&fury>30|!talent.demonic|buff.metamorphosis.up|cooldown.eye_beam.remains>15+(10*talent.cycle_of_hatred)))&talent.any_means_necessary
+        if A.VengefulRetreat:IsReady(player) and useMovement and A.Initiative:IsTalentLearned() and A.EssenceBreak:IsTalentLearned() and combatTime > 1 and InMelee() and A.GetCurrentGCD() < 0.1 then
+            if (A.EssenceBreak:GetCooldown() > 15 or (A.EssenceBreak:GetCooldown() < A.GetCurrentGCD() and (not A.Demonic:IsTalentLearned() or Unit(player):HasBuffs(A.Metamorphosis.ID) > 0 or A.EyeBeam:GetCooldown() > 15 + 10 * num(A.CycleofHatred:IsTalentLearned()))) and (combatTime < 30 or A.GetCurrentGCD() - 1 < 0) and not A.AnyMeansNecessary:IsTalentLearned() and (not A.Initiative:IsTalentLearned() or Unit(player):HasBuffs(A.Initiative.ID) < A.GetCurrentGCD() or combatTime > 4)) then
+                return A.VengefulRetreat:Show(icon)
+            elseif (A.EssenceBreak:GetCooldown() > 15 or (A.EssenceBreak:GetCooldown() < A.GetCurrentGCD() * 2 and (Unit(player):HasBuffs(A.Initiative.ID) < A.GetCurrentGCD() and not holdingMeta and A.EyeBeam:GetCooldown() == A.GetCurrentGCD() and fury > 30 or not A.Demonic:IsTalentLearned() or Unit(player):HasBuffs(A.Metamorphosis.ID) > 0 or A.EyeBeam:GetCooldown() > 15 + 10 * num(A.CycleofHatred:IsTalentLearned()))) and A.AnyMeansNecessary:IsTalentLearned()) then
+                return A.VengefulRetreat:Show(icon)
+            end
+        end
+
+        -- actions+=/vengeful_retreat,use_off_gcd=1,if=talent.initiative&!talent.essence_break&time>1&!buff.momentum.up
+        if A.VengefulRetreat:IsReady(player) and useMovement and InMelee() and A.GetCurrentGCD() < 0.1 and A.Initiative:IsTalentLearned() and not A.EssenceBreak:IsTalentLearned() and combatTime > 1 and Unit(player):HasBuffs(A.Momentum.ID) == 0 then
+            return A.VengefulRetreat:Show(icon)
+        end
+
+        -- actions+=/fel_rush,if=talent.momentum.enabled&buff.momentum.remains<gcd.max*2&(charges_fractional>1.8|cooldown.eye_beam.remains<3)&debuff.essence_break.down&cooldown.blade_dance.remains
+        if A.FelRush:IsReady(player) and useMovement and Unit(unitID):GetRange() < 15 and A.Momentum:IsTalentLearned() and Unit(player):HasBuffs(A.Momentum.ID) < A.GetGCD() * 2 and (A.FelRush:GetSpellChargesFrac() > 1.8 or A.EyeBeam:GetCooldown() < 3) and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and A.BladeDance:GetCooldown() > 0 then
+            return A.FelRush:Show(icon)
+        end
+
+        -- actions+=/essence_break,if=(active_enemies>desired_targets|raid_event.adds.in>40)&!variable.waiting_for_momentum&(buff.metamorphosis.remains>gcd.max*3|cooldown.eye_beam.remains>10)&(!talent.tactical_retreat|buff.tactical_retreat.up|time<10)&buff.vengeful_retreat_movement.remains<gcd.max*0.5&cooldown.blade_dance.remains<=3.1*gcd.max|fight_remains<6
+        if A.EssenceBreak:IsReady(player) and (activeEnemies >= desiredTargets or Unit(unitID):IsBoss()) and not waitingForMomentum and (Unit(player):HasBuffs(A.Metamorphosis.ID) > A.GetGCD() * 3 or A.EyeBeam:GetCooldown() > 10) and (not A.TacticalRetreat:IsTalentLearned() or Unit(player):HasBuffs(A.TacticalRetreat.ID) > 0 or combatTime < 10) and isBackflip and A.BladeDance:GetCooldown() <= A.GetGCD() * 3.1 or (fightRemains < 6 and Unit(unitID):IsBoss()) then
+            return A.EssenceBreak:Show(icon)
+        end
+
+        -- actions+=/death_sweep,if=variable.blade_dance&(!talent.essence_break|cooldown.essence_break.remains>gcd.max*2)
+        if A.BladeDance:IsReady(player) and InMelee() and useBladeDance and (not A.EssenceBreak:IsTalentLearned() or A.EssenceBreak:GetCooldown() > A.GetGCD() * 2) then
+            return A.BladeDance:Show(icon)
+        end
+
+        -- actions+=/fel_barrage,if=active_enemies>desired_targets|raid_event.adds.in>30
+        if A.FelBarrage:IsReady(player) and activeEnemies >= desiredTargets then
+            return A.FelBarrage:Show(icon)
+        end
+
+        -- actions+=/glaive_tempest,if=(active_enemies>desired_targets|raid_event.adds.in>10)&(debuff.essence_break.down|active_enemies>1)
+        if A.GlaiveTempest:IsReady(player) and InMelee() and (activeEnemies >= desiredTargets or Unit(unitID):IsBoss()) and (Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 or activeEnemies > 1) then
+            return A.GlaiveTempest:Show(icon)
+        end
+
+        -- actions+=/annihilation,if=buff.inner_demon.up&cooldown.eye_beam.remains<=gcd
+        if A.ChaosStrike:IsReady(unitID) and Unit(player):HasBuffs(A.InnerDemon.ID) > 0 and A.EyeBeam:GetCooldown() <= A.GetGCD() then
+            return A.ChaosStrike:Show(icon)
+        end
+
+        -- actions+=/fel_rush,if=talent.momentum.enabled&cooldown.eye_beam.remains<gcd.max*3&buff.momentum.remains<5&buff.metamorphosis.down
+        if A.FelRush:IsReady(player) and A.Momentum:IsTalentLearned() and A.EyeBeam:GetCooldown() < A.GetGCD() * 3 and Unit(player):HasBuffs(A.Momentum.ID) < 5 and Unit(player):HasBuffs(A.Metamorphosis.ID) == 0 then
+            return A.FelRush:Show(icon)
+        end
+
+        -- actions+=/the_hunt,if=debuff.essence_break.down&(time<10|cooldown.metamorphosis.remains>10|!equipped.algethar_puzzle_box)&(raid_event.adds.in>90|active_enemies>3|time_to_die<10)&(time>6&debuff.essence_break.down&(!talent.furious_gaze|buff.furious_gaze.up)|!set_bonus.tier30_2pc)
+        if A.TheHunt:IsReady(unitID) and useBurst and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and (combatTime < 10 or A.Metamorphosis:GetCooldown() > 10) and (activeEnemies > 3 or Unit(unitID):TimeToDie() < 10 and Unit(unitID):IsBoss()) and (combatTime > 6 and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and (not A.FuriousGaze:IsTalentLearned() or Unit(player):HasBuffs(A.FuriousGaze.ID) > 0) or not T30has2P) then
+            return A.TheHunt:Show(icon)
+        end
+
+        -- actions+=/eye_beam,if=active_enemies>desired_targets|raid_event.adds.in>(40-talent.cycle_of_hatred*15)&!debuff.essence_break.up&(cooldown.metamorphosis.remains>40-talent.cycle_of_hatred*15|!variable.holding_meta)&(buff.metamorphosis.down|buff.metamorphosis.remains>gcd.max|!talent.restless_hunter)|fight_remains<15
+        if A.EyeBeam:IsReady(player) and (activeEnemies >= desiredTargets) and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and (A.Metamorphosis:GetCooldown() > (40 - num(A.CycleofHatred:IsTalentLearned()) * 15) or not holdingMeta) and (Unit(player):HasBuffs(A.Metamorphosis.ID) == 0 or Unit(player):HasBuffs(A.Metamorphosis.ID) > A.GetGCD() or not A.RestlessHunter:IsTalentLearned()) or (fightRemains < 15 and Unit(unitID):IsBoss()) then
+            return A.EyeBeam:Show(icon)
+        end        
+        -- actions+=/blade_dance,if=variable.blade_dance&(cooldown.eye_beam.remains>5|equipped.algethar_puzzle_box&cooldown.metamorphosis.remains>(cooldown.blade_dance.duration)|!talent.demonic|(raid_event.adds.in>cooldown&raid_event.adds.in<25))
+        if A.BladeDance:IsReady(player) and InMelee() and bladeDance and (A.EyeBeam:GetCooldown() > 5 or not A.Demonic:IsTalentLearned()) then
+            return A.BladeDance:Show(icon)
+        end        
+        -- actions+=/sigil_of_flame,if=talent.any_means_necessary&debuff.essence_break.down&active_enemies>=4
+        if A.SigilofFlame:IsReady(player) and (InMelee() or A.PreciseSigils:IsTalentLearned()) and A.AnyMeansNecessary:IsTalentLearned() and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and activeEnemies >= 4 then
+            return A.SigilofFlame:Show(icon)
+        end
+
+        -- actions+=/throw_glaive,if=talent.soulrend&(active_enemies>desired_targets|raid_event.adds.in>full_recharge_time+9)&spell_targets>=(2-talent.furious_throws)&!debuff.essence_break.up&(full_recharge_time<gcd.max*3|active_enemies>1)
+        if A.ThrowGlaive:IsReady(unitID) and A.Soulrend:IsTalentLearned() and (activeEnemies >= desiredTargets) and spellTargets >= (2 - num(A.FuriousThrows:IsTalentLearned())) and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 and (A.ThrowGlaive:GetSpellChargesFullRechargeTime() < A.GetGCD() * 3 or activeEnemies > 1) then
+            return A.ThrowGlaive:Show(icon)
+        end
+        
+        -- actions+=/sigil_of_flame,if=talent.any_means_necessary&debuff.essence_break.down
+        if A.SigilofFlame:IsReady(player) and (InMelee() or A.PreciseSigils:IsTalentLearned()) and A.AnyMeansNecessary:IsTalentLearned() and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 then
+            return A.SigilofFlame:Show(icon)
+        end        
+
+        -- actions+=/immolation_aura,if=active_enemies>=2&fury<70&debuff.essence_break.down
+        if A.ImmolationAura:IsReady(player) and InMelee() and activeEnemies >= 2 and fury < 70 and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 then
+            return A.ImmolationAura:Show(icon)
+        end
+
+        -- actions+=/annihilation,if=!variable.pooling_for_blade_dance|set_bonus.tier30_2pc
+        if A.ChaosStrike:IsReady(unitID) and (not poolingForBladeDance or T30has2P) then
+            return A.ChaosStrike:Show(icon)
+        end
+
+        -- actions+=/throw_glaive,if=talent.soulrend&(active_enemies>desired_targets|raid_event.adds.in>full_recharge_time+9)&spell_targets>=(2-talent.furious_throws)&!debuff.essence_break.up
+        if A.ThrowGlaive:IsReady(unitID) and A.Soulrend:IsTalentLearned() and (activeEnemies >= desiredTargets or Unit(unitID):IsBoss()) and spellTargets >= (2 - num(A.FuriousThrows:IsTalentLearned())) and Unit(unitID):HasDeBuffs(A.EssenceBreak.ID) == 0 then
+            return A.ThrowGlaive:Show(icon)
+        end
+
+        -- actions+=/immolation_aura,if=!buff.immolation_aura.up&(!talent.ragefire|active_enemies>desired_targets|raid_event.adds.in>15)&buff.out_of_range.down
+        if A.ImmolationAura:IsReady(player) and InMelee() and Unit(player):HasBuffs(A.ImmolationAura.ID) == 0 and (not A.Ragefire:IsTalentLearned() or activeEnemies >= desiredTargets) then
+            return A.ImmolationAura:Show(icon)
+        end
+
+        -- actions+=/fel_rush,if=talent.isolated_prey&active_enemies=1&fury.deficit>=35
+        if A.FelRush:IsReady(player) and useMovement and A.IsolatedPrey:IsTalentLearned() and activeEnemies == 1 and furyDeficit >= 35 then
+            return A.FelRush:Show(icon)
+        end
+        
+        -- actions+=/chaos_strike,if=!variable.pooling_for_blade_dance&!variable.pooling_for_eye_beam
+        if A.ChaosStrike:IsReady(unitID) and not poolingForBladeDance and not poolingForEyeBeam then
+            return A.ChaosStrike:Show(icon)
+        end
+
+        -- actions+=/sigil_of_flame,if=raid_event.adds.in>15&fury.deficit>=30&buff.out_of_range.down
+        if A.SigilofFlame:IsReady(player) and InMelee() and furyDeficit >= 30 then
+            return A.SigilofFlame:Show(icon)
+        end
+
+        -- actions+=/felblade,if=fury.deficit>=40&buff.out_of_range.down
+        if A.Felblade:IsReady(unitID) and furyDeficit >= 40 then
+            return A.Felblade:Show(icon)
+        end
+
+        -- actions+=/fel_rush,if=!talent.momentum&talent.demon_blades&!cooldown.eye_beam.ready&(charges=2|(raid_event.movement.in>10&raid_event.adds.in>10))
+        if A.FelRush:IsReady(player) and useMovement and not A.Momentum:IsTalentLearned() and A.DemonBlades:IsTalentLearned() and A.EyeBeam:GetCooldown() > 0 and A.FelRush:GetSpellCharges() == 2 then
+            return A.FelRush:Show(icon)
+        end
+
+        -- actions+=/demons_bite,target_if=min:debuff.burning_wound.remains,if=talent.burning_wound&debuff.burning_wound.remains<4&active_dot.burning_wound<(spell_targets>?3)
+
+
+        -- actions+=/fel_rush,if=!talent.momentum&!talent.demon_blades&spell_targets>1&(charges=2|(raid_event.movement.in>10&raid_event.adds.in>10))
+        if A.FelRush:IsReady(player) and useMovement and not A.Momentum:IsTalentLearned() and not A.DemonBlades:IsTalentLearned() and spellTargets > 1 and A.FelRush:GetSpellCharges() == 2 then
+            return A.FelRush:Show(icon)
+        end
+
+        -- actions+=/sigil_of_flame,if=raid_event.adds.in>15&fury.deficit>=30&buff.out_of_range.down
+        if A.SigilofFlame:IsReady(player) and furyDeficit >= 30 and InMelee() then
+            return A.SigilofFlame:Show(icon)
+        end
+
+        -- actions+=/demons_bite
+        if A.DemonsBite:IsReady(unitID) and not A.DemonBlades:IsTalentLearned() then
+            return A.DemonsBite:Show(icon)
+        end
+
+
+
+
+        --[[ actions+=/vengeful_retreat,use_off_gcd=1,if=talent.initiative&talent.essence_break&time>1&(cooldown.essence_break.remains>15|cooldown.essence_break.remains<gcd.max&(!talent.demonic|buff.metamorphosis.up|cooldown.eye_beam.remains>15+(10*talent.cycle_of_hatred)))
         if A.VengefulRetreat:IsReady(player) and useMovement and spellTargets >= 1 and A.Felblade:GetCooldown() == 0 and A.Initiative:IsTalentLearned() and A.EssenceBreak:IsTalentLearned() and Unit(player):CombatTime() > 1 and (A.EssenceBreak:GetCooldown() > 15 or A.EssenceBreak:GetCooldown() < A.GetGCD() and (not A.Demonic:IsTalentLearned() or Unit(player):HasBuffs(A.Metamorphosis.ID) > 0 or A.EyeBeam:GetCooldown() > 15 + (10*num(A.CycleofHatred:IsTalentLearned())))) then
             return A.VengefulRetreat:Show(icon)
         end
@@ -551,7 +860,7 @@ A[3] = function(icon, isMulti)
         -- actions+=/throw_glaive,if=(talent.demon_blades|buff.out_of_range.up)&!debuff.essence_break.up
         if A.ThrowGlaive:IsReady(unitID) then
             return A.ThrowGlaive:Show(icon)
-        end
+        end]]
 
     end
 
