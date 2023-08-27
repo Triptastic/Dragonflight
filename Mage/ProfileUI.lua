@@ -29,7 +29,7 @@ end
 
 A.Data.ProfileEnabled[Action.CurrentProfile] = true
 A.Data.ProfileUI = {    
-    DateTime = "v2.0 (10 January 2021)",
+    DateTime = "v2.0 (28 August 2023)",
     -- Class settings
     [2] = {        
         [ACTION_CONST_MAGE_FIRE] = {  
